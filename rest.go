@@ -58,9 +58,9 @@ func (host Host) RequestDeviceInfo(deviceid string) (DeviceNode, error) {
 
 // NodeDescriptor provides the common fields that Device and Service nodes share
 type NodeDescriptor struct {
-	Name     string `json:"name"`
-	ID       string `json:"id"`
-	MQTTRoot string `json:"mqttroot"`
+	Name   string `json:"name"`
+	ID     string `json:"id"`
+	Pubsub PubSub `json:"pubsub"`
 }
 
 // ServiceListDeviceItem represents the device and service configuration pair
@@ -74,6 +74,7 @@ type ServiceListDeviceItem struct {
 // from the RESTful JSON interface
 type ServiceNode struct {
 	NodeDescriptor                         // Node descriptor of Service Node
+	Description    string                  `json:"description"`
 	DeviceNodes    []ServiceListDeviceItem `json:"devicenodes"`
 }
 
