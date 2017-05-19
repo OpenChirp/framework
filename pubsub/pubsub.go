@@ -1,4 +1,4 @@
-package framework
+package pubsub
 
 import "encoding/json"
 

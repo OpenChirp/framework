@@ -62,34 +62,3 @@ type NodeDescriptor struct {
 	ID     string `json:"id"`
 	Pubsub PubSub `json:"pubsub"`
 }
-
-// ServiceListDeviceItem represents the device and service configuration pair
-// found in a Service Node's device list
-type ServiceListDeviceItem struct {
-	NodeDescriptor                 // Node descriptor listed Device Node
-	ServiceConfig  json.RawMessage `json:"serviceconfig"`
-}
-
-// ServiceNode is a container for Service Node object received
-// from the RESTful JSON interface
-type ServiceNode struct {
-	NodeDescriptor                         // Node descriptor of Service Node
-	Description    string                  `json:"description"`
-	DeviceNodes    []ServiceListDeviceItem `json:"devicenodes"`
-}
-
-// DeviceListServiceItem represents the service and service configuration pair
-// found in in a Device Node's service list
-type DeviceListServiceItem struct {
-	ServiceID     string          `json:"serviceid"`
-	ServiceConfig json.RawMessage `json:"serviceconfig"`
-}
-
-// DeviceNode is a container for Device Node object received
-// from the RESTful JSON interface
-type DeviceNode struct {
-	NodeDescriptor                         // Node descriptor of Device Node
-	Data           map[string]interface{}  `json:"data"`
-	Properties     map[string]interface{}  `json:"properties"`
-	Services       []DeviceListServiceItem `json:"services"`
-}
