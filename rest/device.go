@@ -1,5 +1,9 @@
 package rest
 
+import (
+	"encoding/json"
+)
+
 // DeviceListServiceItem represents the service and service configuration pair
 // found in in a Device Node's service list
 type DeviceListServiceItem struct {
