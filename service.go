@@ -3,11 +3,13 @@ package framework
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 
+	CRAND "crypto/rand"
+
 	MQTT "github.com/eclipse/paho.mqtt.golang"
-	"github.com/openchirp/framework"
 	"github.com/openchirp/framework/rest"
 )
 
@@ -20,10 +22,10 @@ var mqttQos uint
 var ErrNotImplemented = errors.New("This method is not implemented yet")
 
 type Service struct {
-	host    framework.Host
+	host    rest.Host
 	mqtt    MQTT.Client
 	node    rest.ServiceNode
-	devices []rest.DeviceListServiceItem
+	devices []rest.ServiceDeviceListItem
 }
 
 /* Generate a random client id for mqtt */
@@ -45,14 +47,19 @@ func (s Service) genclientid() string {
 
 // StartService starts the service maangement layer for service
 // with id serviceid
-func StartService(host framework.Host, serviceid string) (*Service, error) {
+func StartService(host rest.Host, serviceid string) (*Service, error) {
+	var err error
+
 	s := new(Service)
 	// we should expect mqtt settings to come from framework host
 	// for now, we will simply deduce it from framework Host
 	// url.Parse(host.)
 
 	// Get Our Service Info
-	s.node = host.RequestServiceInfo(serviceid)
+	s.node, err = host.RequestServiceInfo(serviceid)
+	if err != nil {
+		return nil, err
+	}
 
 	// Connect to MQTT
 	/* Setup basic MQTT connection */
@@ -63,17 +70,25 @@ func StartService(host framework.Host, serviceid string) (*Service, error) {
 
 	/* Create and start a client using the above ClientOptions */
 	s.mqtt = MQTT.NewClient(opts)
-	if token := c.Connect(); token.Wait() && token.Error() != nil {
-		return nil, err
+	if token := s.mqtt.Connect(); token.Wait() && token.Error() != nil {
+		return nil, token.Error()
 	}
 
 	// Subscribe to our news topic
 	// s.mqtt.Subscribe()
 
 	// Get The Current Device Config
-	s.devices = host.RequestServiceDeviceList(serviceid)
+	s.devices, err = host.RequestServiceDeviceList(serviceid)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(s.devices)
 
 	return s, nil
+}
+
+func (s *Service) StartNews() {
+
 }
 
 func (s *Service) GetMQTTClient() *MQTT.Client {

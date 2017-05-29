@@ -8,12 +8,15 @@ package rest
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
 const (
-	deviceSubPath   = "/device"
-	servicesSubPath = "/service"
+	rootAPISubPath        = "/api"
+	deviceSubPath         = "/device"
+	servicesSubPath       = "/service"
+	serviceDevicesSubPath = "/things"
 )
 
 // Host represents the RESTful HTTP server that hosts the framework
@@ -42,7 +45,9 @@ func (host *Host) Login(username, password string) error {
 // the Service Node information for service with ID serviceid.
 func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 	var serviceNode ServiceNode
-	req, err := http.NewRequest("GET", host.uri+servicesSubPath+"/"+serviceid, nil)
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
+	fmt.Println(uri)
+	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
 
 	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceid)
@@ -59,7 +64,8 @@ func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 // RequestServiceDeviceList
 func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceListItem, error) {
 	var serviceDeviceListItems = make([]ServiceDeviceListItem, 0)
-	req, err := http.NewRequest("GET", host.uri+servicesSubPath+"/"+serviceid+"/things", nil)
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid + serviceDevicesSubPath
+	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
 
 	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceid)
