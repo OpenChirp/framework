@@ -43,6 +43,9 @@ type DeviceUpdate struct {
 	ServiceDeviceUpdate
 }
 
+// TopicHandler is a function prototype for a subscribed topic callback
+type TopicHandler func(service *Service, topic string, payload []byte)
+
 type Service struct {
 	id      string
 	host    rest.Host
@@ -52,7 +55,7 @@ type Service struct {
 	log     *log.Logger
 }
 
-// genclientid generates a random client id for mqtt
+// genClientID generates a random client id for mqtt
 func (s Service) genClientID() string {
 	r, err := CRAND.Int(CRAND.Reader, new(big.Int).SetInt64(100000))
 	if err != nil {
@@ -70,12 +73,13 @@ func (s Service) genClientID() string {
 // }
 
 // StartService starts the service maangement layer for service
-// with id serviceid
-func StartService(host rest.Host, serviceid string) (*Service, error) {
+// with id serviceID
+func StartService(host rest.Host, serviceID string) (*Service, error) {
 	var err error
 
 	s := new(Service)
-	s.id = serviceid
+	s.host = host
+	s.id = serviceID
 	s.log = log.New(os.Stderr, "Service:", log.Flags())
 
 	// we should expect mqtt settings to come from framework host
@@ -83,7 +87,7 @@ func StartService(host rest.Host, serviceid string) (*Service, error) {
 	// url.Parse(host.)
 
 	// Get Our Service Info
-	s.node, err = host.RequestServiceInfo(s.id)
+	s.node, err = s.host.RequestServiceInfo(s.id)
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +103,8 @@ func StartService(host rest.Host, serviceid string) (*Service, error) {
 	s.mqtt = MQTT.NewClient(opts)
 	if token := s.mqtt.Connect(); token.Wait() && token.Error() != nil {
 		return nil, token.Error()
-	}
 
-	// Subscribe to our news topic
-	// s.mqtt.Subscribe()
+	}
 
 	return s, nil
 }
@@ -110,10 +112,10 @@ func StartService(host rest.Host, serviceid string) (*Service, error) {
 func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 	s.updates = make(chan DeviceUpdate, deviceUpdatesBuffering)
 	// Hack until we have one unified topic
-	addtopic := s.node.Pubsub.Topic + "/thing/new"
-	remtopic := s.node.Pubsub.Topic + "/thing/remove"
-	updtopic := s.node.Pubsub.Topic + "/thing/update"
-	err := s.Subscribe(addtopic, func(service *Service, topic string, payload []byte) {
+	topicAdd := s.node.Pubsub.Topic + "/thing/new"
+	topicRem := s.node.Pubsub.Topic + "/thing/remove"
+	topicUpd := s.node.Pubsub.Topic + "/thing/update"
+	err := s.Subscribe(topicAdd, func(service *Service, topic string, payload []byte) {
 		var mqttMsg ServiceUpdatesEncapsulation
 		err := json.Unmarshal(payload, &mqttMsg)
 		if err != nil {
@@ -130,7 +132,7 @@ func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 		s.updates = nil
 	}
 
-	err = s.Subscribe(remtopic, func(service *Service, topic string, payload []byte) {
+	err = s.Subscribe(topicRem, func(service *Service, topic string, payload []byte) {
 		var mqttMsg ServiceUpdatesEncapsulation
 		err := json.Unmarshal(payload, &mqttMsg)
 		if err != nil {
@@ -143,12 +145,12 @@ func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 		}
 	})
 	if err != nil {
-		s.Unsubscribe(addtopic)
+		s.Unsubscribe(topicAdd)
 		close(s.updates)
 		s.updates = nil
 	}
 
-	err = s.Subscribe(updtopic, func(service *Service, topic string, payload []byte) {
+	err = s.Subscribe(topicUpd, func(service *Service, topic string, payload []byte) {
 		var mqttMsg ServiceUpdatesEncapsulation
 		err := json.Unmarshal(payload, &mqttMsg)
 		if err != nil {
@@ -161,8 +163,8 @@ func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 		}
 	})
 	if err != nil {
-		s.Unsubscribe(addtopic)
-		s.Unsubscribe(remtopic)
+		s.Unsubscribe(topicAdd)
+		s.Unsubscribe(topicRem)
 		close(s.updates)
 		s.updates = nil
 	}
@@ -172,12 +174,12 @@ func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 
 func (s *Service) StopDeviceUpdates() {
 	// Hack until we have one unified topic
-	addtopic := s.node.Pubsub.Topic + "/thing/new"
-	remtopic := s.node.Pubsub.Topic + "/thing/remove"
-	updtopic := s.node.Pubsub.Topic + "/thing/update"
-	s.Unsubscribe(addtopic)
-	s.Unsubscribe(remtopic)
-	s.Unsubscribe(updtopic)
+	topicAdd := s.node.Pubsub.Topic + "/thing/new"
+	topicRem := s.node.Pubsub.Topic + "/thing/remove"
+	topicUpd := s.node.Pubsub.Topic + "/thing/update"
+	s.Unsubscribe(topicAdd)
+	s.Unsubscribe(topicRem)
+	s.Unsubscribe(topicUpd)
 	close(s.updates)
 }
 
@@ -191,8 +193,6 @@ func (s *Service) FetchDeviceConfigs() ([]rest.ServiceDeviceListItem, error) {
 func (s *Service) StopService() {
 	s.mqtt.Disconnect(0)
 }
-
-type TopicHandler func(service *Service, topic string, payload []byte)
 
 func (s *Service) Subscribe(topic string, callback TopicHandler) error {
 	token := s.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
@@ -214,16 +214,21 @@ func (s *Service) Publish(topic string, payload []byte) error {
 	return token.Error()
 }
 
-func (s *Service) GetMQTTClient() *MQTT.Client {
-	return &s.mqtt
-}
-
-// need service go routine to listen for updates
-
-func (s Service) GetProperties() map[string]string {
+// GetProperties returns the full properties key/value mapping
+func (s *Service) GetProperties() map[string]string {
 	return s.node.Properties
 }
 
-func (s *Service) GetDevices() {
+// GetProperty fetches the service property associated with key. If it does
+// not exist the blank string is returned.
+func (s *Service) GetProperty(key string) string {
+	value, ok := s.node.Properties[key]
+	if ok {
+		return value
+	}
+	return ""
+}
 
+func (s *Service) GetMQTTClient() *MQTT.Client {
+	return &s.mqtt
 }

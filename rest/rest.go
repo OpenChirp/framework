@@ -46,7 +46,7 @@ func (host *Host) Login(username, password string) error {
 func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 	var serviceNode ServiceNode
 	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
-	fmt.Println(uri)
+	fmt.Println("URI: ", uri)
 	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
 
@@ -65,6 +65,7 @@ func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceListItem, error) {
 	var serviceDeviceListItems = make([]ServiceDeviceListItem, 0)
 	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid + serviceDevicesSubPath
+	fmt.Println("Service URI: ", uri)
 	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
 
@@ -83,7 +84,13 @@ func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceList
 // the Device Node information for device with ID deviceid.
 func (host Host) RequestDeviceInfo(deviceid string) (DeviceNode, error) {
 	var deviceNode DeviceNode
-	resp, err := http.Get(host.uri + deviceSubPath + "/" + deviceid)
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceid
+	fmt.Println("DevURI:", uri)
+	req, err := http.NewRequest("GET", uri, nil)
+	req.SetBasicAuth(host.user, host.pass)
+
+	// resp, err := http.Get(uri)
+	resp, err := host.client.Do(req)
 	if err != nil {
 		// should report auth problems here in future
 		return deviceNode, err
