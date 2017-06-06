@@ -229,6 +229,6 @@ func (s *Service) GetProperty(key string) string {
 	return ""
 }
 
-func (s *Service) GetMQTTClient() *MQTT.Client {
-	return &s.mqtt
+func (s *Service) GetMQTTClient() MQTT.Client {
+	return s.mqtt
 }
