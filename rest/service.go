@@ -32,12 +32,26 @@ Services Device Config Requests Look Like The Following:
 ]
 */
 
+type KeyValuePair struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 // ServiceDeviceListItem represents the device and service configuration pair
 // found in a Service Node's device list
 type ServiceDeviceListItem struct {
-	Id     string `json:"id"`
-	Config []struct {
-		Key   string `json:"key"`
-		Value string `json:"value"`
-	} `json:"service_config"`
+	Id     string         `json:"id"`
+	Config []KeyValuePair `json:"service_config"`
+}
+
+func (i ServiceDeviceListItem) GetID() string {
+	return i.Id
+}
+
+func (i ServiceDeviceListItem) GetConfigMap() map[string]string {
+	m := make(map[string]string)
+	for _, v := range i.Config {
+		m[v.Key] = v.Value
+	}
+	return m
 }

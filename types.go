@@ -1,5 +1,7 @@
 package framework
 
+import "github.com/openchirp/framework/rest"
+
 /*
 News Updates Look Like The Following:
 openchirp/services/592880c57d6ec25f901d9668/thing/new
@@ -14,16 +16,11 @@ openchirp/services/592880c57d6ec25f901d9668/thing/new
 }
 */
 
-type KeyValuePair struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
 type ServiceUpdatesEncapsulation struct {
 	Thing ServiceDeviceUpdate `json:"thing"`
 }
 
 type ServiceDeviceUpdate struct {
-	Id     string         `json:"id"`
-	Config []KeyValuePair `json:"config"`
+	Id     string              `json:"id"`
+	Config []rest.KeyValuePair `json:"config"`
 }
