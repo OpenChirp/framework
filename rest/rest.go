@@ -7,6 +7,7 @@
 package rest
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -98,6 +99,21 @@ func (host Host) RequestDeviceInfo(deviceid string) (DeviceNode, error) {
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(&deviceNode)
 	return deviceNode, err
+}
+
+// RequestDeviceInfo makes an HTTP GET to the framework server requesting
+// the Device Node information for device with ID deviceid.
+func (host Host) ExecuteCommand(deviceID, commandID string) error {
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/command/" + commandID
+	req, err := http.NewRequest("POST", uri, bytes.NewReader([]byte("{}")))
+	req.SetBasicAuth(host.user, host.pass)
+
+	// resp, err := http.Get(uri)
+	resp, err := host.client.Do(req)
+	if err != nil {
+		resp.Body.Close()
+	}
+	return err
 }
 
 type PubSub struct {
