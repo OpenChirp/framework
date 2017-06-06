@@ -106,9 +106,16 @@ type PubSub struct {
 	ExtraJunk json.RawMessage `json:"serviceconfig"`
 }
 
+type Owner struct {
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 // NodeDescriptor provides the common fields that Device and Service nodes share
 type NodeDescriptor struct {
 	Name   string `json:"name"`
 	ID     string `json:"id"`
 	Pubsub PubSub `json:"pubsub"`
+	Owner  Owner  `json:"owner"`
 }
