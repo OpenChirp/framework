@@ -41,7 +41,7 @@ type KeyValuePair struct {
 // found in a Service Node's device list
 type ServiceDeviceListItem struct {
 	Id     string         `json:"id"`
-	Config []KeyValuePair `json:"service_config"`
+	Config []KeyValuePair `json:"config"`
 }
 
 func (i ServiceDeviceListItem) GetID() string {
