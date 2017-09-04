@@ -44,8 +44,8 @@ type DeviceUpdate struct {
 	ServiceDeviceUpdate
 }
 
-// TopicHandler is a function prototype for a subscribed topic callback
-type TopicHandler func(service *Service, topic string, payload []byte)
+// ServiceTopicHandler is a function prototype for a subscribed topic callback
+type ServiceTopicHandler func(service *Service, topic string, payload []byte)
 
 // Service hold a single service context
 type Service struct {
@@ -197,7 +197,7 @@ func (s *Service) StopService() {
 }
 
 // Subscribe registers a callback for a receiving a given mqtt topic payload
-func (s *Service) Subscribe(topic string, callback TopicHandler) error {
+func (s *Service) Subscribe(topic string, callback ServiceTopicHandler) error {
 	token := s.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
 		callback(s, message.Topic(), message.Payload())
 	})
