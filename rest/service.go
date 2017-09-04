@@ -14,7 +14,7 @@ Services Device Config Requests Look Like The Following:
   {
     "id": "592c8a627d6ec25f901d9687",
     "type": "device",
-    "service_config": [
+    "config": [
       {
         "key": "DevEUI",
         "value": "test1"
