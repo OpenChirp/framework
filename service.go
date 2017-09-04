@@ -46,6 +46,7 @@ type DeviceUpdate struct {
 // TopicHandler is a function prototype for a subscribed topic callback
 type TopicHandler func(service *Service, topic string, payload []byte)
 
+// Service hold a single service context
 type Service struct {
 	id      string
 	host    rest.Host
@@ -64,15 +65,7 @@ func (s Service) genClientID() string {
 	return s.node.ID + "-" + r.String()
 }
 
-// CreateService creates the named service on the framework server
-// and returns serviceid upon sucess
-// func CreateService(host framework.Host, name string) (string, error) {
-// 	host = host // exercise that host variable
-// 	name = name // exercise that name variable
-// 	return "", ErrNotImplemented
-// }
-
-// StartService starts the service maangement layer for service
+// StartService starts the service management layer for service
 // with id serviceID
 func StartService(host rest.Host, serviceID string) (*Service, error) {
 	var err error
@@ -94,6 +87,7 @@ func StartService(host rest.Host, serviceID string) (*Service, error) {
 
 	// Connect to MQTT
 	/* Setup basic MQTT connection */
+	// FIXME: Use serviceid and service "token" as credentials
 	opts := MQTT.NewClientOptions().AddBroker(s.node.Properties["MQTTBroker"])
 	opts.SetClientID(s.genClientID())
 	opts.SetUsername(s.node.Properties["MQTTUser"])
@@ -109,12 +103,16 @@ func StartService(host rest.Host, serviceID string) (*Service, error) {
 	return s, nil
 }
 
+// StartDeviceUpdates subscribes to the live mqtt service news topic and opens
+// a channel to read the updates from.
+// TODO: Services need updates to come from one topic to remove race condition
 func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 	s.updates = make(chan DeviceUpdate, deviceUpdatesBuffering)
 	// Hack until we have one unified topic
 	topicAdd := s.node.Pubsub.Topic + "/thing/new"
 	topicRem := s.node.Pubsub.Topic + "/thing/remove"
 	topicUpd := s.node.Pubsub.Topic + "/thing/update"
+
 	err := s.Subscribe(topicAdd, func(service *Service, topic string, payload []byte) {
 		var mqttMsg ServiceUpdatesEncapsulation
 		err := json.Unmarshal(payload, &mqttMsg)
@@ -172,6 +170,8 @@ func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 	return s.updates, err
 }
 
+// StopDeviceUpdates unsubscribes from service news topic and closes the
+// news channel
 func (s *Service) StopDeviceUpdates() {
 	// Hack until we have one unified topic
 	topicAdd := s.node.Pubsub.Topic + "/thing/new"
@@ -183,6 +183,7 @@ func (s *Service) StopDeviceUpdates() {
 	close(s.updates)
 }
 
+// FetchDeviceConfigs requests all device configs for the current service
 func (s *Service) FetchDeviceConfigs() ([]rest.ServiceDeviceListItem, error) {
 	// Get The Current Device Config
 	devs, err := s.host.RequestServiceDeviceList(s.id)
@@ -194,6 +195,7 @@ func (s *Service) StopService() {
 	s.mqtt.Disconnect(0)
 }
 
+// Subscribe registers a callback for a receiving a given mqtt topic payload
 func (s *Service) Subscribe(topic string, callback TopicHandler) error {
 	token := s.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
 		callback(s, message.Topic(), message.Payload())
@@ -202,19 +204,21 @@ func (s *Service) Subscribe(topic string, callback TopicHandler) error {
 	return token.Error()
 }
 
+// Unsubscribe deregisters a callback for a given mqtt topic
 func (s *Service) Unsubscribe(topic string) error {
 	token := s.mqtt.Unsubscribe(topic)
 	token.Wait()
 	return token.Error()
 }
 
+// Publish published a payload to a given mqtt topic
 func (s *Service) Publish(topic string, payload []byte) error {
 	token := s.mqtt.Publish(topic, byte(mqttQos), mqttPersistence, payload)
 	token.Wait()
 	return token.Error()
 }
 
-// GetProperties returns the full properties key/value mapping
+// GetProperties returns the full service properties key/value mapping
 func (s *Service) GetProperties() map[string]string {
 	return s.node.Properties
 }
@@ -229,6 +233,9 @@ func (s *Service) GetProperty(key string) string {
 	return ""
 }
 
+// GetMQTTClient bypasses the service interface and provies the underlying
+// mqtt client context
+// This will be removed in the near future
 func (s *Service) GetMQTTClient() MQTT.Client {
 	return s.mqtt
 }
