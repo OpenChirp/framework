@@ -212,7 +212,7 @@ func (s *Service) Unsubscribe(topic string) error {
 	return token.Error()
 }
 
-// Publish published a payload to a given mqtt topic
+// Publish publishes a payload to a given mqtt topic
 func (s *Service) Publish(topic string, payload []byte) error {
 	token := s.mqtt.Publish(topic, byte(mqttQos), mqttPersistence, payload)
 	token.Wait()

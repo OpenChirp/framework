@@ -16,6 +16,7 @@ import (
 // TopicHandler is a function prototype for a subscribed topic callback
 type ClientTopicHandler func(client *Client, topic string, payload []byte)
 
+// Client represents the context for a single client
 type Client struct {
 	host rest.Host
 	mqtt MQTT.Client
@@ -66,17 +67,12 @@ func StartClient(host rest.Host, broker, user, pass string) (*Client, error) {
 	return c, nil
 }
 
-// func (c *Client) FetchDeviceConfigs() ([]rest.ServiceDeviceListItem, error) {
-// 	// Get The Current Device Config
-// 	devs, err := c.host.RequestServiceDeviceList(s.id)
-// 	return devs, err
-// }
-
 // StopService shuts down a started service
 func (c *Client) StopClient() {
 	c.mqtt.Disconnect(0)
 }
 
+// Subscribe registers a callback for a receiving a given mqtt topic payload
 func (c *Client) Subscribe(topic string, callback ClientTopicHandler) error {
 	token := c.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
 		callback(c, message.Topic(), message.Payload())
@@ -85,33 +81,23 @@ func (c *Client) Subscribe(topic string, callback ClientTopicHandler) error {
 	return token.Error()
 }
 
+// Unsubscribe deregisters a callback for a given mqtt topic
 func (c *Client) Unsubscribe(topic string) error {
 	token := c.mqtt.Unsubscribe(topic)
 	token.Wait()
 	return token.Error()
 }
 
+// Publish publishes a payload to a given mqtt topic
 func (c *Client) Publish(topic string, payload []byte) error {
 	token := c.mqtt.Publish(topic, byte(mqttQos), mqttPersistence, payload)
 	token.Wait()
 	return token.Error()
 }
 
-// // GetProperties returns the full properties key/value mapping
-// func (s *Client) GetProperties() map[string]string {
-// 	return s.node.Properties
-// }
-
-// // GetProperty fetches the service property associated with key. If it does
-// // not exist the blank string is returned.
-// func (s *Client) GetProperty(key string) string {
-// 	value, ok := s.node.Properties[key]
-// 	if ok {
-// 		return value
-// 	}
-// 	return ""
-// }
-
+// GetMQTTClient bypasses the service interface and provies the underlying
+// mqtt client context
+// This will be removed in the near future
 func (s *Client) GetMQTTClient() *MQTT.Client {
 	return &s.mqtt
 }
