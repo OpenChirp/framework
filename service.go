@@ -38,6 +38,7 @@ const (
 	DeviceUpdateTypeUpd
 )
 
+// DeviceUpdate represents a pending service config change for a device
 type DeviceUpdate struct {
 	Type int
 	ServiceDeviceUpdate
