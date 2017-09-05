@@ -7,20 +7,19 @@ import (
 
 	CRAND "crypto/rand"
 
-	"os"
-
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/openchirp/framework/rest"
 )
 
-// TopicHandler is a function prototype for a subscribed topic callback
+// ClientTopicHandler is a function prototype for a subscribed topic callback
 type ClientTopicHandler func(client *Client, topic string, payload []byte)
 
 // Client represents the context for a single client
 type Client struct {
-	host rest.Host
-	mqtt MQTT.Client
-	log  *log.Logger
+	id    string
+	token string
+	host  rest.Host
+	mqtt  MQTT.Client
 }
 
 // genClientID generates a random client id for mqtt
@@ -32,48 +31,33 @@ func (c Client) genClientID() string {
 	return "client" + r.String()
 }
 
-// CreateService creates the named service on the framework server
-// and returns serviceid upon sucess
-// func CreateService(host framework.Host, name string) (string, error) {
-// 	host = host // exercise that host variable
-// 	name = name // exercise that name variable
-// 	return "", ErrNotImplemented
-// }
+// startClient starts the client connection
+func (c *Client) startClient(frameworkuri, brokeruri, id, token string) error {
+	/* Setup the REST interface */
+	c.host = rest.NewHost(frameworkuri)
 
-// StartClient starts the service management layer for service
-// with id serviceID
-func StartClient(host rest.Host, broker, user, pass string) (*Client, error) {
-	c := new(Client)
-	c.host = host
-	c.log = log.New(os.Stderr, "Service:", log.Flags())
-
-	// we should expect mqtt settings to come from framework host
-	// for now, we will simply deduce it from framework Host
-	// url.Parse(host.)
-
-	// Connect to MQTT
-	/* Setup basic MQTT connection */
-	opts := MQTT.NewClientOptions().AddBroker(broker)
+	/* Connect the MQTT connection */
+	opts := MQTT.NewClientOptions().AddBroker(brokeruri)
 	opts.SetClientID(c.genClientID())
-	opts.SetUsername(user)
-	opts.SetPassword(pass)
+	opts.SetUsername(id)
+	opts.SetPassword(token)
 
 	/* Create and start a client using the above ClientOptions */
 	c.mqtt = MQTT.NewClient(opts)
 	if token := c.mqtt.Connect(); token.Wait() && token.Error() != nil {
-		return nil, token.Error()
+		return token.Error()
 	}
 
-	return c, nil
+	return nil
 }
 
-// StopService shuts down a started service
-func (c *Client) StopClient() {
+// stopService shuts down a started client
+func (c *Client) stopClient() {
 	c.mqtt.Disconnect(0)
 }
 
-// Subscribe registers a callback for a receiving a given mqtt topic payload
-func (c *Client) Subscribe(topic string, callback ClientTopicHandler) error {
+// subscribe registers a callback for a receiving a given mqtt topic payload
+func (c *Client) subscribe(topic string, callback ClientTopicHandler) error {
 	token := c.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
 		callback(c, message.Topic(), message.Payload())
 	})
@@ -81,15 +65,15 @@ func (c *Client) Subscribe(topic string, callback ClientTopicHandler) error {
 	return token.Error()
 }
 
-// Unsubscribe deregisters a callback for a given mqtt topic
-func (c *Client) Unsubscribe(topic string) error {
+// unsubscribe deregisters a callback for a given mqtt topic
+func (c *Client) unsubscribe(topic string) error {
 	token := c.mqtt.Unsubscribe(topic)
 	token.Wait()
 	return token.Error()
 }
 
-// Publish publishes a payload to a given mqtt topic
-func (c *Client) Publish(topic string, payload []byte) error {
+// publish publishes a payload to a given mqtt topic
+func (c *Client) publish(topic string, payload []byte) error {
 	token := c.mqtt.Publish(topic, byte(mqttQos), mqttPersistence, payload)
 	token.Wait()
 	return token.Error()
