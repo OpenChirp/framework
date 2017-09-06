@@ -32,6 +32,55 @@ var ErrMarshalStatusMessage = errors.New("Failed to marshall status message into
 var ErrMarshalDeviceStatusMessage = errors.New("Failed to marshall device status message into JSON")
 var ErrNotImplemented = errors.New("This method is not implemented yet")
 
+// DeviceUpdateType represents enumeration of DeviceUpdate types
+type DeviceUpdateType int
+
+const (
+	// DeviceUpdateAdd indicates that a new device linked in this service
+	DeviceUpdateTypeAdd DeviceUpdateType = iota
+	// DeviceUpdateRem indicates a device has unlinked this service
+	DeviceUpdateTypeRem
+	// DeviceUpdateUpd indicates that a device this service's config
+	DeviceUpdateTypeUpd
+)
+
+// String associates a pretty name with the DeviceUpdateTypes
+func (dut DeviceUpdateType) String() (s string) {
+	switch dut {
+	case DeviceUpdateTypeAdd:
+		s = "Add"
+	case DeviceUpdateTypeRem:
+		s = "Remove"
+	case DeviceUpdateTypeUpd:
+		s = "Update"
+	}
+	return
+}
+
+// DeviceUpdate represents a pending service config change for a device
+type DeviceUpdate struct {
+	Type   DeviceUpdateType
+	Id     string
+	Config map[string]string
+}
+
+// String provides a human parsable string for DeviceUpdates
+func (du DeviceUpdate) String() string {
+	return fmt.Sprintf("Type: %v, Id: %s, Config: %v", du.Type, du.Id, du.Config)
+}
+
+// ServiceTopicHandler is a function prototype for a subscribed topic callback
+type ServiceTopicHandler func(client *ServiceClient, topic string, payload []byte)
+
+// ServiceClient hold a single ses.Publish(s.)rvice context
+type ServiceClient struct {
+	Client
+	node         rest.ServiceNode
+	updatesQueue chan DeviceUpdate
+	updates      chan DeviceUpdate
+	log          *log.Logger
+}
+
 /*
 News Updates Look Like The Following:
 openchirp/services/592880c57d6ec25f901d9668/thing/events:
@@ -47,48 +96,20 @@ openchirp/services/592880c57d6ec25f901d9668/thing/events:
 }
 */
 
-type ServiceUpdatesEncapsulation struct {
+type serviceUpdatesEncapsulation struct {
 	Action string                     `json:"action"`
 	Device rest.ServiceDeviceListItem `json:"thing"`
 }
 
-type ServiceStatus struct {
+type serviceStatus struct {
 	Message string `json:"message"`
 }
 
-type ServiceDeviceStatus struct {
+type serviceDeviceStatus struct {
 	Device struct {
 		Id      string `json:"id"`
 		Message string `json:"message"`
 	} `json:"thing"`
-}
-
-const (
-	// DeviceUpdateAdd indicates that a new device linked in this service
-	DeviceUpdateTypeAdd = iota
-	// DeviceUpdateRem indicates a device has unlinked this service
-	DeviceUpdateTypeRem
-	// DeviceUpdateUpd indicates that a device this service's config
-	DeviceUpdateTypeUpd
-)
-
-// DeviceUpdate represents a pending service config change for a device
-type DeviceUpdate struct {
-	Type   int
-	Id     string
-	Config map[string]string
-}
-
-// ServiceTopicHandler is a function prototype for a subscribed topic callback
-type ServiceTopicHandler func(client *ServiceClient, topic string, payload []byte)
-
-// ServiceClient hold a single ses.Publish(s.)rvice context
-type ServiceClient struct {
-	Client
-	node         rest.ServiceNode
-	updatesQueue chan DeviceUpdate
-	updates      chan DeviceUpdate
-	log          *log.Logger
 }
 
 // StartServiceClient starts the service management layer
@@ -121,7 +142,7 @@ func (c *ServiceClient) StopClient() {
 
 // SetStatus publishes the service status message
 func (c *ServiceClient) SetStatus(msgs ...interface{}) error {
-	var statusmsg ServiceStatus
+	var statusmsg serviceStatus
 	statusmsg.Message = fmt.Sprint(msgs...)
 	payload, err := json.Marshal(&statusmsg)
 	if err != nil {
@@ -132,7 +153,7 @@ func (c *ServiceClient) SetStatus(msgs ...interface{}) error {
 
 // SetDeviceStatus publishes a device's linked service status message
 func (c *ServiceClient) SetDeviceStatus(id string, msgs ...interface{}) error {
-	var statusmsg ServiceDeviceStatus
+	var statusmsg serviceDeviceStatus
 	statusmsg.Device.Id = id
 	statusmsg.Device.Message = fmt.Sprint(msgs...)
 	payload, err := json.Marshal(&statusmsg)
@@ -156,7 +177,7 @@ func (c *ServiceClient) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
 	err := c.Subscribe(topicEvents, func(service *ServiceClient, topic string, payload []byte) {
 		// action: new, update, delete
-		var mqttMsg ServiceUpdatesEncapsulation
+		var mqttMsg serviceUpdatesEncapsulation
 		var devUpdate DeviceUpdate
 
 		err := json.Unmarshal(payload, &mqttMsg)
