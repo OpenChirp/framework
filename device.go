@@ -15,14 +15,15 @@ func StartDeviceClient(frameworkuri, brokeruri, id, token string) (*DeviceClient
 	var err error
 	c := new(DeviceClient)
 
-	// Get Our Device Info
-	c.node, err = c.host.RequestDeviceInfo(c.id)
+	// Start Client
+	err = c.startClient(frameworkuri, brokeruri, id, token)
 	if err != nil {
 		return nil, err
 	}
 
-	// Start Client
-	err = c.startClient(frameworkuri, brokeruri, id, token)
+	// Get Our Device Info
+	c.node, err = c.host.RequestDeviceInfo(c.id)
+
 	return c, err
 }
 
