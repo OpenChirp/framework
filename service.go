@@ -175,7 +175,7 @@ func (c *ServiceClient) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 	/* Setup MQTT based device updates to feed updatesQueue */
 	c.updatesQueue = make(chan DeviceUpdate, deviceUpdatesBuffering)
 	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
-	err := c.Subscribe(topicEvents, func(service *ServiceClient, topic string, payload []byte) {
+	err := c.SubscribeWithClient(topicEvents, func(service *ServiceClient, topic string, payload []byte) {
 		// action: new, update, delete
 		var mqttMsg serviceUpdatesEncapsulation
 		var devUpdate DeviceUpdate
@@ -251,7 +251,13 @@ func (c *ServiceClient) FetchDeviceConfigs() ([]rest.ServiceDeviceListItem, erro
 }
 
 // Subscribe registers a callback for a receiving a given mqtt topic payload
-func (c *ServiceClient) Subscribe(topic string, callback ServiceTopicHandler) error {
+func (c *ServiceClient) Subscribe(topic string, callback func(topic string, payload []byte)) error {
+	return c.subscribe(topic, callback)
+}
+
+// SubscribeWithClient registers a callback for a receiving a given mqtt
+// topic payload and provides the client object
+func (c *ServiceClient) SubscribeWithClient(topic string, callback ServiceTopicHandler) error {
 	return c.subscribe(topic, func(topic string, payload []byte) {
 		callback(c, topic, payload)
 	})
