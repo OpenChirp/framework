@@ -16,7 +16,7 @@ import (
 
 const (
 	eventsSubTopic         = "/thing/events"
-	deviceStatusSubTopic   = "/thing/status"
+	deviceStatusSubTopic   = "/status"
 	statusSubTopic         = "/status"
 	deviceUpdatesBuffering = 10
 	mqttPersistence        = false // we should never have this enabled
