@@ -37,9 +37,12 @@ func (c *DeviceClient) Subscribe(subtopic string, callback ClientTopicHandler) e
 	return c.subscribe(c.node.Pubsub.Topic+"/"+subtopic, callback)
 }
 
-// Unsubscribe deregisters a callback for a given mqtt topic
-func (c *DeviceClient) Unsubscribe(subtopic string) error {
-	return c.unsubscribe(c.node.Pubsub.Topic + "/" + subtopic)
+// Unsubscribe deregisters a callback for a given mqtt topics
+func (c *DeviceClient) Unsubscribe(subtopics ...string) error {
+	for i, subtopic := range subtopics {
+		subtopics[i] = c.node.Pubsub.Topic + "/" + subtopic
+	}
+	return c.unsubscribe(subtopics...)
 }
 
 // Publish publishes a payload to a given mqtt topic

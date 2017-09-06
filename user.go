@@ -27,9 +27,9 @@ func (c *UserClient) Subscribe(topic string, callback UserClientTopicHandler) er
 	})
 }
 
-// Unsubscribe deregisters a callback for a given mqtt topic
-func (c *UserClient) Unsubscribe(topic string) error {
-	return c.unsubscribe(topic)
+// Unsubscribe deregisters a callback for a given mqtt topics
+func (c *UserClient) Unsubscribe(topics ...string) error {
+	return c.unsubscribe(topics...)
 }
 
 // Publish publishes a payload to a given mqtt topic

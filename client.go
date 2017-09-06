@@ -73,9 +73,9 @@ func (c *Client) subscribe(topic string, callback ClientTopicHandler) error {
 	return token.Error()
 }
 
-// unsubscribe deregisters a callback for a given mqtt topic
-func (c *Client) unsubscribe(topic string) error {
-	token := c.mqtt.Unsubscribe(topic)
+// unsubscribe deregisters a callback for a given mqtt topics
+func (c *Client) unsubscribe(topics ...string) error {
+	token := c.mqtt.Unsubscribe(topics...)
 	token.Wait()
 	return token.Error()
 }

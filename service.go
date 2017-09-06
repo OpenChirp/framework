@@ -258,8 +258,8 @@ func (c *ServiceClient) Subscribe(topic string, callback ServiceTopicHandler) er
 }
 
 // Unsubscribe deregisters a callback for a given mqtt topic
-func (c *ServiceClient) Unsubscribe(topic string) error {
-	return c.unsubscribe(topic)
+func (c *ServiceClient) Unsubscribe(topics ...string) error {
+	return c.unsubscribe(topics...)
 }
 
 // Publish publishes a payload to a given mqtt topic
