@@ -81,7 +81,7 @@ func (c *Client) unsubscribe(topics ...string) error {
 }
 
 // publish publishes a payload to a given mqtt topic
-func (c *Client) publish(topic string, payload []byte) error {
+func (c *Client) publish(topic string, payload interface{}) error {
 	token := c.mqtt.Publish(topic, byte(mqttQos), mqttPersistence, payload)
 	token.Wait()
 	return token.Error()

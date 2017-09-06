@@ -33,6 +33,6 @@ func (c *UserClient) Unsubscribe(topics ...string) error {
 }
 
 // Publish publishes a payload to a given mqtt topic
-func (c *UserClient) Publish(topic string, payload []byte) error {
+func (c *UserClient) Publish(topic string, payload interface{}) error {
 	return c.publish(topic, payload)
 }

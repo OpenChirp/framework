@@ -46,6 +46,6 @@ func (c *DeviceClient) Unsubscribe(subtopics ...string) error {
 }
 
 // Publish publishes a payload to a given mqtt topic
-func (c *DeviceClient) Publish(subtopic string, payload []byte) error {
+func (c *DeviceClient) Publish(subtopic string, payload interface{}) error {
 	return c.publish(c.node.Pubsub.Topic+"/"+subtopic, payload)
 }
