@@ -47,7 +47,6 @@ func (host *Host) Login(username, password string) error {
 func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 	var serviceNode ServiceNode
 	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
-	fmt.Println("URI: ", uri)
 	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
 
