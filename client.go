@@ -33,8 +33,16 @@ func (c Client) genClientID() string {
 
 // startClient starts the client connection
 func (c *Client) startClient(frameworkuri, brokeruri, id, token string) error {
+
+	/* Setup basic client parameters */
+	c.id = id
+	c.token = token
+
 	/* Setup the REST interface */
 	c.host = rest.NewHost(frameworkuri)
+	if err := c.host.Login(id, token); err != nil {
+		return err
+	}
 
 	/* Connect the MQTT connection */
 	opts := MQTT.NewClientOptions().AddBroker(brokeruri)
