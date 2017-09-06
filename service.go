@@ -1,22 +1,23 @@
 // Package service provides the management library for a long running service
+// It should be noted that updates
 package framework
 
 import (
 	"errors"
+	"fmt"
 	"log"
-	"math/big"
-
-	CRAND "crypto/rand"
 
 	"os"
 
 	"encoding/json"
 
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/openchirp/framework/rest"
 )
 
 const (
+	eventsSubTopic         = "/thing/events"
+	deviceStatusSubTopic   = "/thing/status"
+	statusSubTopic         = "/status"
 	deviceUpdatesBuffering = 10
 	mqttPersistence        = false // we should never have this enabled
 )
@@ -27,7 +28,40 @@ var mqttUser string
 var mqttPass string
 var mqttQos uint
 
+var ErrMarshalStatusMessage = errors.New("Failed to marshall status message into JSON")
+var ErrMarshalDeviceStatusMessage = errors.New("Failed to marshall device status message into JSON")
 var ErrNotImplemented = errors.New("This method is not implemented yet")
+
+/*
+News Updates Look Like The Following:
+openchirp/services/592880c57d6ec25f901d9668/thing/events:
+{
+	"action":"new",
+	"thing":{
+		"type":"device",
+		"id":"5930aaf27d6ec25f901d96da",
+		"config":[
+			{"key":"rxconfig","value":"[]"},
+			{"key":"txconfig","value":"[]"}]
+	}
+}
+*/
+
+type ServiceUpdatesEncapsulation struct {
+	Action string                     `json:"action"`
+	Device rest.ServiceDeviceListItem `json:"thing"`
+}
+
+type ServiceStatus struct {
+	Message string `json:"message"`
+}
+
+type ServiceDeviceStatus struct {
+	Device struct {
+		Id      string `json:"id"`
+		Message string `json:"message"`
+	} `json:"thing"`
+}
 
 const (
 	// DeviceUpdateAdd indicates that a new device linked in this service
@@ -40,203 +74,189 @@ const (
 
 // DeviceUpdate represents a pending service config change for a device
 type DeviceUpdate struct {
-	Type int
-	ServiceDeviceUpdate
+	Type   int
+	Id     string
+	Config map[string]string
 }
 
 // ServiceTopicHandler is a function prototype for a subscribed topic callback
-type ServiceTopicHandler func(service *Service, topic string, payload []byte)
+type ServiceTopicHandler func(client *ServiceClient, topic string, payload []byte)
 
-// Service hold a single service context
-type Service struct {
-	id      string
-	host    rest.Host
-	mqtt    MQTT.Client
-	node    rest.ServiceNode
-	updates chan DeviceUpdate
-	log     *log.Logger
+// ServiceClient hold a single ses.Publish(s.)rvice context
+type ServiceClient struct {
+	Client
+	node         rest.ServiceNode
+	updatesQueue chan DeviceUpdate
+	updates      chan DeviceUpdate
+	log          *log.Logger
 }
 
-// genClientID generates a random client id for mqtt
-func (s Service) genClientID() string {
-	r, err := CRAND.Int(CRAND.Reader, new(big.Int).SetInt64(100000))
-	if err != nil {
-		log.Fatal("Couldn't generate a random number for MQTT client ID")
-	}
-	return s.node.ID + "-" + r.String()
-}
-
-// StartService starts the service management layer for service
-// with id serviceID
-func StartService(host rest.Host, serviceID string) (*Service, error) {
+// StartServiceClient starts the service management layer
+func StartServiceClient(frameworkuri, brokeruri, id, token string) (*ServiceClient, error) {
 	var err error
 
-	s := new(Service)
-	s.host = host
-	s.id = serviceID
-	s.log = log.New(os.Stderr, "Service:", log.Flags())
+	c := new(ServiceClient)
 
-	// we should expect mqtt settings to come from framework host
-	// for now, we will simply deduce it from framework Host
-	// url.Parse(host.)
-
-	// Get Our Service Info
-	s.node, err = s.host.RequestServiceInfo(s.id)
+	// Start Client
+	err = c.startClient(frameworkuri, brokeruri, id, token)
 	if err != nil {
 		return nil, err
 	}
 
-	// Connect to MQTT
-	/* Setup basic MQTT connection */
-	// FIXME: Use serviceid and service "token" as credentials
-	opts := MQTT.NewClientOptions().AddBroker(s.node.Properties["MQTTBroker"])
-	opts.SetClientID(s.genClientID())
-	opts.SetUsername(s.node.Properties["MQTTUser"])
-	opts.SetPassword(s.node.Properties["MQTTPass"])
-
-	/* Create and start a client using the above ClientOptions */
-	s.mqtt = MQTT.NewClient(opts)
-	if token := s.mqtt.Connect(); token.Wait() && token.Error() != nil {
-		return nil, token.Error()
-
+	// Get Our Service Info
+	c.node, err = c.host.RequestServiceInfo(c.id)
+	if err != nil {
+		return nil, err
 	}
 
-	return s, nil
+	c.log = log.New(os.Stderr, "Service:", log.Flags())
+
+	return c, nil
+}
+
+// StopClient shuts down a started service
+func (c *ServiceClient) StopClient() {
+	c.stopClient()
+}
+
+// SetStatus publishes the service status message
+func (c *ServiceClient) SetStatus(msgs ...interface{}) error {
+	var statusmsg ServiceStatus
+	statusmsg.Message = fmt.Sprint(msgs...)
+	payload, err := json.Marshal(&statusmsg)
+	if err != nil {
+		return ErrMarshalStatusMessage
+	}
+	return c.Publish(c.node.Pubsub.Topic+statusSubTopic, payload)
+}
+
+// SetDeviceStatus publishes a device's linked service status message
+func (c *ServiceClient) SetDeviceStatus(id string, msgs ...interface{}) error {
+	var statusmsg ServiceDeviceStatus
+	statusmsg.Device.Id = id
+	statusmsg.Device.Message = fmt.Sprint(msgs...)
+	payload, err := json.Marshal(&statusmsg)
+	if err != nil {
+		return ErrMarshalDeviceStatusMessage
+	}
+	return c.Publish(c.node.Pubsub.Topic+deviceStatusSubTopic, payload)
 }
 
 // StartDeviceUpdates subscribes to the live mqtt service news topic and opens
 // a channel to read the updates from.
 // TODO: Services need updates to come from one topic to remove race condition
-func (s *Service) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
-	s.updates = make(chan DeviceUpdate, deviceUpdatesBuffering)
-	// Hack until we have one unified topic
-	topicAdd := s.node.Pubsub.Topic + "/thing/new"
-	topicRem := s.node.Pubsub.Topic + "/thing/remove"
-	topicUpd := s.node.Pubsub.Topic + "/thing/update"
+func (c *ServiceClient) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 
-	err := s.Subscribe(topicAdd, func(service *Service, topic string, payload []byte) {
+	//FIXME: Scheduling between add, remove, and update topic notifications is
+	//       inherently a race condition. Please serialize the updates on
+	//       the server end into one topic!
+
+	/* Setup MQTT based device updates to feed updatesQueue */
+	c.updatesQueue = make(chan DeviceUpdate, deviceUpdatesBuffering)
+	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
+	err := c.Subscribe(topicEvents, func(service *ServiceClient, topic string, payload []byte) {
+		// action: new, update, delete
 		var mqttMsg ServiceUpdatesEncapsulation
+		var devUpdate DeviceUpdate
+
 		err := json.Unmarshal(payload, &mqttMsg)
 		if err != nil {
-			s.log.Printf("Failed to unmarshal message on topic %s\n", topic)
+			c.log.Printf("Failed to unmarshal message on topic %s\n", topic)
 			return
 		}
-		s.updates <- DeviceUpdate{
-			Type:                DeviceUpdateTypeAdd,
-			ServiceDeviceUpdate: mqttMsg.Thing,
+
+		switch mqttMsg.Action {
+		case "new":
+			devUpdate.Type = DeviceUpdateTypeAdd
+		case "update":
+			devUpdate.Type = DeviceUpdateTypeUpd
+		case "delete":
+			devUpdate.Type = DeviceUpdateTypeRem
 		}
+		devUpdate.Id = mqttMsg.Device.Id
+		devUpdate.Config = mqttMsg.Device.GetConfigMap()
+
+		c.updatesQueue <- devUpdate
 	})
 	if err != nil {
-		close(s.updates)
-		s.updates = nil
+		close(c.updatesQueue)
+		return nil, err
 	}
 
-	err = s.Subscribe(topicRem, func(service *Service, topic string, payload []byte) {
-		var mqttMsg ServiceUpdatesEncapsulation
-		err := json.Unmarshal(payload, &mqttMsg)
-		if err != nil {
-			s.log.Printf("Failed to unmarshal message on topic %s\n", topic)
-			return
-		}
-		s.updates <- DeviceUpdate{
-			Type:                DeviceUpdateTypeRem,
-			ServiceDeviceUpdate: mqttMsg.Thing,
-		}
-	})
+	/* Preload device updates from REST request */
+	deviceConfigs, err := c.host.RequestServiceDeviceList(c.id)
 	if err != nil {
-		s.Unsubscribe(topicAdd)
-		close(s.updates)
-		s.updates = nil
+		c.Unsubscribe(topicEvents)
+		close(c.updatesQueue)
+		c.updatesQueue = nil // make it clear that nobody can reach the chan
+		return nil, err
+	}
+	c.updates = make(chan DeviceUpdate, len(deviceConfigs))
+	for _, devConfig := range deviceConfigs {
+		c.updates <- DeviceUpdate{
+			Type:   DeviceUpdateTypeAdd,
+			Id:     devConfig.Id,
+			Config: devConfig.GetConfigMap(),
+		}
 	}
 
-	err = s.Subscribe(topicUpd, func(service *Service, topic string, payload []byte) {
-		var mqttMsg ServiceUpdatesEncapsulation
-		err := json.Unmarshal(payload, &mqttMsg)
-		if err != nil {
-			s.log.Printf("Failed to unmarshal message on topic %s\n", topic)
-			return
+	/* Connect updatesQueue channel to updates channel*/
+	go func() {
+		for update := range c.updatesQueue {
+			c.updates <- update
 		}
-		s.updates <- DeviceUpdate{
-			Type:                DeviceUpdateTypeUpd,
-			ServiceDeviceUpdate: mqttMsg.Thing,
-		}
-	})
-	if err != nil {
-		s.Unsubscribe(topicAdd)
-		s.Unsubscribe(topicRem)
-		close(s.updates)
-		s.updates = nil
-	}
+		close(c.updates)
+	}()
 
-	return s.updates, err
+	return c.updates, err
 }
 
 // StopDeviceUpdates unsubscribes from service news topic and closes the
 // news channel
-func (s *Service) StopDeviceUpdates() {
-	// Hack until we have one unified topic
-	topicAdd := s.node.Pubsub.Topic + "/thing/new"
-	topicRem := s.node.Pubsub.Topic + "/thing/remove"
-	topicUpd := s.node.Pubsub.Topic + "/thing/update"
-	s.Unsubscribe(topicAdd)
-	s.Unsubscribe(topicRem)
-	s.Unsubscribe(topicUpd)
-	close(s.updates)
+func (c *ServiceClient) StopDeviceUpdates() {
+	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
+	c.Unsubscribe(topicEvents)
+	close(c.updatesQueue)
+	for _ = range c.updates {
+		// read all remaining elements in order to close chan and go routine
+	}
 }
 
 // FetchDeviceConfigs requests all device configs for the current service
-func (s *Service) FetchDeviceConfigs() ([]rest.ServiceDeviceListItem, error) {
+func (c *ServiceClient) FetchDeviceConfigs() ([]rest.ServiceDeviceListItem, error) {
 	// Get The Current Device Config
-	devs, err := s.host.RequestServiceDeviceList(s.id)
+	devs, err := c.host.RequestServiceDeviceList(c.id)
 	return devs, err
 }
 
-// StopService shuts down a started service
-func (s *Service) StopService() {
-	s.mqtt.Disconnect(0)
-}
-
 // Subscribe registers a callback for a receiving a given mqtt topic payload
-func (s *Service) Subscribe(topic string, callback ServiceTopicHandler) error {
-	token := s.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
-		callback(s, message.Topic(), message.Payload())
+func (c *ServiceClient) Subscribe(topic string, callback ServiceTopicHandler) error {
+	return c.subscribe(topic, func(topic string, payload []byte) {
+		callback(c, topic, payload)
 	})
-	token.Wait()
-	return token.Error()
 }
 
 // Unsubscribe deregisters a callback for a given mqtt topic
-func (s *Service) Unsubscribe(topic string) error {
-	token := s.mqtt.Unsubscribe(topic)
-	token.Wait()
-	return token.Error()
+func (c *ServiceClient) Unsubscribe(topic string) error {
+	return c.unsubscribe(topic)
 }
 
 // Publish publishes a payload to a given mqtt topic
-func (s *Service) Publish(topic string, payload []byte) error {
-	token := s.mqtt.Publish(topic, byte(mqttQos), mqttPersistence, payload)
-	token.Wait()
-	return token.Error()
+func (c *ServiceClient) Publish(topic string, payload []byte) error {
+	return c.publish(topic, payload)
 }
 
 // GetProperties returns the full service properties key/value mapping
-func (s *Service) GetProperties() map[string]string {
-	return s.node.Properties
+func (c *ServiceClient) GetProperties() map[string]string {
+	return c.node.Properties
 }
 
 // GetProperty fetches the service property associated with key. If it does
 // not exist the blank string is returned.
-func (s *Service) GetProperty(key string) string {
-	value, ok := s.node.Properties[key]
+func (c *ServiceClient) GetProperty(key string) string {
+	value, ok := c.node.Properties[key]
 	if ok {
 		return value
 	}
 	return ""
-}
-
-// GetMQTTClient bypasses the service interface and provies the underlying
-// mqtt client context
-// This will be removed in the near future
-func (s *Service) GetMQTTClient() MQTT.Client {
-	return s.mqtt
 }
