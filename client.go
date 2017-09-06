@@ -12,7 +12,7 @@ import (
 )
 
 // ClientTopicHandler is a function prototype for a subscribed topic callback
-type ClientTopicHandler func(client *Client, topic string, payload []byte)
+type ClientTopicHandler func(topic string, payload []byte)
 
 // Client represents the context for a single client
 type Client struct {
@@ -67,7 +67,7 @@ func (c *Client) stopClient() {
 // subscribe registers a callback for a receiving a given mqtt topic payload
 func (c *Client) subscribe(topic string, callback ClientTopicHandler) error {
 	token := c.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
-		callback(c, message.Topic(), message.Payload())
+		callback(message.Topic(), message.Payload())
 	})
 	token.Wait()
 	return token.Error()
