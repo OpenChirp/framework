@@ -114,18 +114,43 @@ type serviceDeviceStatus struct {
 
 // StartServiceClient starts the service management layer
 func StartServiceClient(frameworkuri, brokeruri, id, token string) (*ServiceClient, error) {
+	c, err := StartServiceClientStatus(frameworkuri, brokeruri, id, token, "")
+	return c, err
+}
+
+// StartServiceClientStatus starts the service management layer with a optional
+// statusmsg if the service disconnects improperly
+func StartServiceClientStatus(frameworkuri, brokeruri, id, token, statusmsg string) (*ServiceClient, error) {
 	var err error
 
 	c := new(ServiceClient)
 
-	// Start Client
-	err = c.startClient(frameworkuri, brokeruri, id, token)
+	// Start enough of the client manually to get REST working
+	c.setAuth(id, token)
+	err = c.startREST(frameworkuri)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get Our Service Info
 	c.node, err = c.host.RequestServiceInfo(c.id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup will'ed status
+	if statusmsg != "" {
+		var msg serviceStatus
+		msg.Message = statusmsg
+		payload, err := json.Marshal(&msg)
+		if err != nil {
+			return nil, ErrMarshalStatusMessage
+		}
+		c.setWill(c.node.Pubsub.Topic+statusSubTopic, []byte(payload))
+	}
+
+	// Start MQTT
+	err = c.startMQTT(brokeruri)
 	if err != nil {
 		return nil, err
 	}
