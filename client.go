@@ -11,15 +11,23 @@ import (
 	"github.com/openchirp/framework/rest"
 )
 
+const (
+	mqttAutoReconnect      = true
+	mqttQoS           byte = 2
+	mqttRetained           = false
+)
+
 // ClientTopicHandler is a function prototype for a subscribed topic callback
 type ClientTopicHandler func(topic string, payload []byte)
 
 // Client represents the context for a single client
 type Client struct {
-	id    string
-	token string
-	host  rest.Host
-	mqtt  MQTT.Client
+	id          string
+	token       string
+	host        rest.Host
+	willTopic   string
+	willPayload []byte
+	mqtt        MQTT.Client
 }
 
 // genClientID generates a random client id for mqtt
@@ -31,32 +39,55 @@ func (c Client) genClientID() string {
 	return "client" + r.String()
 }
 
-// startClient starts the client connection
-func (c *Client) startClient(frameworkuri, brokeruri, id, token string) error {
-
-	/* Setup basic client parameters */
+// setAuth sets basic client authentication parameters
+func (c *Client) setAuth(id, token string) {
 	c.id = id
 	c.token = token
+}
 
-	/* Setup the REST interface */
+func (c *Client) startREST(frameworkuri string) error {
 	c.host = rest.NewHost(frameworkuri)
-	if err := c.host.Login(id, token); err != nil {
+	if err := c.host.Login(c.id, c.token); err != nil {
 		return err
 	}
+	return nil
+}
 
+func (c *Client) setWill(topic string, payload []byte) {
+	c.willTopic = topic
+	c.willPayload = payload
+}
+
+func (c *Client) startMQTT(brokeruri string) error {
 	/* Connect the MQTT connection */
 	opts := MQTT.NewClientOptions().AddBroker(brokeruri)
 	opts.SetClientID(c.genClientID())
-	opts.SetUsername(id)
-	opts.SetPassword(token)
+	opts.SetUsername(c.id).SetPassword(c.token)
+	opts.SetAutoReconnect(mqttAutoReconnect)
+	if c.willTopic != "" {
+		opts.SetBinaryWill(c.willTopic, c.willPayload, mqttQoS, mqttRetained)
+	}
 
 	/* Create and start a client using the above ClientOptions */
 	c.mqtt = MQTT.NewClient(opts)
 	if token := c.mqtt.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
-
 	return nil
+}
+
+// startClient sets auth, starts REST, and starts MQTT
+func (c *Client) startClient(frameworkuri, brokeruri, id, token string) error {
+	/* Setup basic client parameters */
+	c.setAuth(id, token)
+
+	/* Setup the REST interface */
+	err := c.startREST(frameworkuri)
+	if err != nil {
+		return err
+	}
+
+	return c.startMQTT(brokeruri)
 }
 
 // stopService shuts down a started client
