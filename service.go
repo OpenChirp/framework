@@ -280,6 +280,26 @@ func (c *ServiceClient) FetchDeviceConfigs() ([]rest.ServiceDeviceListItem, erro
 	return devs, err
 }
 
+// FetchDeviceConfigsAsUpdates requests all device configs for the current
+// service and converts them into DeviceUpdate with DeviceUpdateTypeAdd as the
+// type
+func (c *ServiceClient) FetchDeviceConfigsAsUpdates() ([]DeviceUpdate, error) {
+	// Get The Current Device Config
+	deviceConfigs, err := c.host.RequestServiceDeviceList(c.id)
+	if err != nil {
+		return nil, err
+	}
+	updates := make([]DeviceUpdate, len(deviceConfigs))
+	for i, devConfig := range deviceConfigs {
+		updates[i] = DeviceUpdate{
+			Type:   DeviceUpdateTypeAdd,
+			Id:     devConfig.Id,
+			Config: devConfig.GetConfigMap(),
+		}
+	}
+	return updates, nil
+}
+
 // Subscribe registers a callback for a receiving a given mqtt topic payload
 func (c *ServiceClient) Subscribe(topic string, callback func(topic string, payload []byte)) error {
 	return c.subscribe(topic, callback)
