@@ -3,9 +3,7 @@ package framework
 import (
 	"errors"
 	"fmt"
-	"log"
-
-	"os"
+	"sync"
 
 	"encoding/json"
 
@@ -29,6 +27,8 @@ var mqttQos uint
 var ErrMarshalStatusMessage = errors.New("Failed to marshall status message into JSON")
 var ErrMarshalDeviceStatusMessage = errors.New("Failed to marshall device status message into JSON")
 var ErrNotImplemented = errors.New("This method is not implemented yet")
+var ErrDeviceUpdatesAlreadyStarted = errors.New("Device updates channel already started")
+var ErrDeviceUpdatesNotStarted = errors.New("Device updates channel not started")
 
 // DeviceUpdateType represents enumeration of DeviceUpdate types
 type DeviceUpdateType int
@@ -85,10 +85,11 @@ type ServiceTopicHandler func(client *ServiceClient, topic string, payload []byt
 // ServiceClient hold a single ses.Publish(s.)rvice context
 type ServiceClient struct {
 	Client
-	node         rest.ServiceNode
-	updatesQueue chan DeviceUpdate
-	updates      chan DeviceUpdate
-	log          *log.Logger
+	node           rest.ServiceNode
+	updatesWg      sync.WaitGroup
+	updatesRunning bool
+	updatesQueue   chan DeviceUpdate
+	updates        chan DeviceUpdate
 }
 
 /*
@@ -165,8 +166,6 @@ func StartServiceClientStatus(frameworkuri, brokeruri, id, token, statusmsg stri
 		return nil, err
 	}
 
-	c.log = log.New(os.Stderr, "Service:", log.Flags())
-
 	return c, nil
 }
 
@@ -198,60 +197,129 @@ func (c *ServiceClient) SetDeviceStatus(id string, msgs ...interface{}) error {
 	return c.Publish(c.node.Pubsub.Topic+deviceStatusSubTopic, payload)
 }
 
-// StartDeviceUpdates subscribes to the live mqtt service news topic and opens
-// a channel to read the updates from.
-func (c *ServiceClient) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
+func (c *ServiceClient) updateEventsHandler() func(topic string, payload []byte) {
+	return func(topic string, payload []byte) {
+		c.updatesWg.Add(1)
+		defer c.updatesWg.Done()
+		if c.updatesRunning {
+			// action: new, update, delete
+			var mqttMsg serviceUpdatesEncapsulation
+			var devUpdate DeviceUpdate
+
+			err := json.Unmarshal(payload, &mqttMsg)
+			if err != nil {
+				c.updatesQueue <- DeviceUpdate{
+					Type: DeviceUpdateTypeErr,
+					Id:   fmt.Sprintf("Failed to unmarshal message on topic %s\n", topic),
+				}
+				return
+			}
+
+			switch mqttMsg.Action {
+			case "new":
+				devUpdate.Type = DeviceUpdateTypeAdd
+			case "update":
+				devUpdate.Type = DeviceUpdateTypeUpd
+			case "delete":
+				devUpdate.Type = DeviceUpdateTypeRem
+			}
+			devUpdate.Id = mqttMsg.Device.Id
+			devUpdate.Config = mqttMsg.Device.GetConfigMap()
+
+			c.updatesQueue <- devUpdate
+		}
+	}
+}
+
+func (c *ServiceClient) startDeviceUpdatesQueue() error {
+	/* Setup MQTT based device updates to feed updatesQueue */
+	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
+	if c.updatesRunning {
+		return ErrDeviceUpdatesAlreadyStarted
+	}
+	c.updatesRunning = true
+	c.updatesQueue = make(chan DeviceUpdate, deviceUpdatesBuffering)
+	err := c.Subscribe(topicEvents, c.updateEventsHandler())
+	if err != nil {
+		c.stopDeviceUpdatesQueue()
+		return err
+	}
+	return nil
+}
+
+func (c *ServiceClient) stopDeviceUpdatesQueue() error {
+	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
+	if c.updatesRunning {
+		return ErrDeviceUpdatesNotStarted
+	}
+
+	c.Unsubscribe(topicEvents)
+	c.updatesRunning = false
+
+	// Unblock all possible updateEventsHandlers while we wait
+	go func() {
+		for _ = range c.updatesQueue {
+			// read all remaining elements in order to close chan and go routines
+		}
+		c.updatesQueue = nil
+	}()
+	// wait for all activivley running routines to finish writing to channel
+	c.updatesWg.Wait()
+	close(c.updatesQueue)
+	return nil
+}
+
+// StartDeviceUpdatesSimple subscribes to the live mqtt service news topic and opens
+// a channel to read the updates from. It will automatically fetch the initial
+// configuration and send those as DeviceUpdateTypeAdd updates first.
+// Due to the time between subscribing to live events and requesting the static
+// configuration, there may be redundant DeviceUpdateTypeAdd updates. Your
+// program should account for this.
+func (c *ServiceClient) StartDeviceUpdatesSimple() (<-chan DeviceUpdate, error) {
 
 	/* Setup MQTT based device updates to feed updatesQueue */
-	c.updatesQueue = make(chan DeviceUpdate, deviceUpdatesBuffering)
-	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
-	err := c.SubscribeWithClient(topicEvents, func(service *ServiceClient, topic string, payload []byte) {
-		// action: new, update, delete
-		var mqttMsg serviceUpdatesEncapsulation
-		var devUpdate DeviceUpdate
-
-		err := json.Unmarshal(payload, &mqttMsg)
-		if err != nil {
-			c.log.Printf("Failed to unmarshal message on topic %s\n", topic)
-			return
-		}
-
-		switch mqttMsg.Action {
-		case "new":
-			devUpdate.Type = DeviceUpdateTypeAdd
-		case "update":
-			devUpdate.Type = DeviceUpdateTypeUpd
-		case "delete":
-			devUpdate.Type = DeviceUpdateTypeRem
-		}
-		devUpdate.Id = mqttMsg.Device.Id
-		devUpdate.Config = mqttMsg.Device.GetConfigMap()
-
-		c.updatesQueue <- devUpdate
-	})
+	err := c.startDeviceUpdatesQueue()
 	if err != nil {
-		close(c.updatesQueue)
 		return nil, err
 	}
 
 	/* Preload device updates from REST request */
-	deviceConfigs, err := c.host.RequestServiceDeviceList(c.id)
+	configUpdates, err := c.FetchDeviceConfigsAsUpdates()
 	if err != nil {
-		c.Unsubscribe(topicEvents)
-		close(c.updatesQueue)
-		c.updatesQueue = nil // make it clear that nobody can reach the chan
+		c.stopDeviceUpdatesQueue()
 		return nil, err
 	}
-	c.updates = make(chan DeviceUpdate, len(deviceConfigs))
-	for _, devConfig := range deviceConfigs {
-		c.updates <- DeviceUpdate{
-			Type:   DeviceUpdateTypeAdd,
-			Id:     devConfig.Id,
-			Config: devConfig.GetConfigMap(),
-		}
+	c.updates = make(chan DeviceUpdate, len(configUpdates))
+	for _, update := range configUpdates {
+		c.updates <- update
 	}
 
-	/* Connect updatesQueue channel to updates channel*/
+	/* Connect updatesQueue channel to updates channel */
+	go func() {
+		for update := range c.updatesQueue {
+			c.updates <- update
+		}
+		close(c.updates)
+	}()
+
+	return c.updates, err
+}
+
+// StartDeviceUpdates subscribes to the live service events topic and opens
+// a channel to read the updates from. This does not inject the initial
+// configurations into the channel at start like StartDeviceUpdatesSimple.
+func (c *ServiceClient) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
+
+	/* Setup MQTT based device updates to feed updatesQueue */
+	err := c.startDeviceUpdatesQueue()
+	if err != nil {
+		return nil, err
+	}
+
+	/* Make the updates channel */
+	c.updates = make(chan DeviceUpdate)
+
+	/* Connect updatesQueue channel to updates channel */
 	go func() {
 		for update := range c.updatesQueue {
 			c.updates <- update
