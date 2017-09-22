@@ -1,4 +1,9 @@
-// Package service provides the management library for a long running service
+// Package framework provides the management interfaces for
+// Users, Devices, and Services. Please use the appropriate top level
+// class for the type of interface you need. The parent class is Client.
+// Users - StartUserClient()
+// Device - StartDeviceClient()
+// Service - StartServiceClient()
 package framework
 
 import (

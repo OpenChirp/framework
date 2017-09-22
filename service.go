@@ -1,5 +1,3 @@
-// Package service provides the management library for a long running service
-// It should be noted that updates
 package framework
 
 import (
@@ -190,12 +188,7 @@ func (c *ServiceClient) SetDeviceStatus(id string, msgs ...interface{}) error {
 
 // StartDeviceUpdates subscribes to the live mqtt service news topic and opens
 // a channel to read the updates from.
-// TODO: Services need updates to come from one topic to remove race condition
 func (c *ServiceClient) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
-
-	//FIXME: Scheduling between add, remove, and update topic notifications is
-	//       inherently a race condition. Please serialize the updates on
-	//       the server end into one topic!
 
 	/* Setup MQTT based device updates to feed updatesQueue */
 	c.updatesQueue = make(chan DeviceUpdate, deviceUpdatesBuffering)
