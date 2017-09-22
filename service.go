@@ -40,6 +40,9 @@ const (
 	DeviceUpdateTypeRem
 	// DeviceUpdateUpd indicates that a device this service's config
 	DeviceUpdateTypeUpd
+	// DeviceUpdateTypeErr indicates an error was encountered while receiving
+	// a device update event. The error message is placed in the Id field.
+	DeviceUpdateTypeErr
 )
 
 // String associates a pretty name with the DeviceUpdateTypes
@@ -51,6 +54,8 @@ func (dut DeviceUpdateType) String() (s string) {
 		s = "Remove"
 	case DeviceUpdateTypeUpd:
 		s = "Update"
+	case DeviceUpdateTypeErr:
+		s = "Error"
 	}
 	return
 }
@@ -60,6 +65,13 @@ type DeviceUpdate struct {
 	Type   DeviceUpdateType
 	Id     string
 	Config map[string]string
+}
+
+func (du DeviceUpdate) Error() string {
+	if du.Type == DeviceUpdateTypeErr {
+		return du.Id
+	}
+	return ""
 }
 
 // String provides a human parsable string for DeviceUpdates
