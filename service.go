@@ -41,7 +41,8 @@ const (
 	// DeviceUpdateUpd indicates that a device this service's config
 	DeviceUpdateTypeUpd
 	// DeviceUpdateTypeErr indicates an error was encountered while receiving
-	// a device update event. The error message is placed in the Id field.
+	// a device update event. The error message can be fetched from
+	// DeviceUpdate.Error()
 	DeviceUpdateTypeErr
 )
 
