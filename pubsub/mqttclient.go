@@ -11,7 +11,7 @@ import (
 const (
 	// Sets whether AutoReonnect will be set
 	defaultAutoReconnect bool = true
-	disconnectWaitMS     uint = 10
+	disconnectWaitMS     uint = 300
 )
 
 type MQTTClient struct {
@@ -59,7 +59,11 @@ func (c MQTTClient) genClientID() (string, error) {
 	return "client" + r.String(), nil
 }
 
-func NewMQTTClient(brokeruri, user, pass string, defaultQoS MQTTQoS, defaultPersistence bool) (*MQTTClient, error) {
+func NewMQTTClient(
+	brokeruri, user, pass string,
+	defaultQoS MQTTQoS,
+	defaultPersistence bool) (*MQTTClient, error) {
+
 	c := new(MQTTClient)
 	c.defaultQoS = defaultQoS
 	c.defaultPersistence = defaultPersistence
