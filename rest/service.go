@@ -1,3 +1,6 @@
+// December 14, 2016
+// Craig Hesling <craig@hesling.com>
+
 package rest
 
 // ServiceNode is a container for Service Node object received
@@ -32,6 +35,8 @@ Services Device Config Requests Look Like The Following:
 ]
 */
 
+// KeyValuePair represents the REST interface's internal structure for
+// maps. This is typically just used to parse JSON from the REST interface.
 type KeyValuePair struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`

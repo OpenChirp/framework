@@ -1,7 +1,7 @@
 // December 14, 2016
 // Craig Hesling <craig@hesling.com>
 
-// Package framework provides the data structures and primitive mechanisms
+// Package rest provides the data structures and primitive mechanisms
 // for representing and communicating framework constructs with the RESTful
 // server.
 package rest
@@ -69,7 +69,6 @@ func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceList
 	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
 
-	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceid)
 	resp, err := host.client.Do(req)
 	if err != nil {
 		// should report auth problems here in future
@@ -115,12 +114,14 @@ func (host Host) ExecuteCommand(deviceID, commandID string) error {
 	return err
 }
 
+// PubSub describes a node's pubsub endpoint
 type PubSub struct {
 	Protocol  string          `json:"protocol"`
 	Topic     string          `json:"endpoint"`
 	ExtraJunk json.RawMessage `json:"serviceconfig"`
 }
 
+// Owner describes the owning user's details
 type Owner struct {
 	Id    string `json:"id"`
 	Name  string `json:"name"`

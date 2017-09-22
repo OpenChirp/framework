@@ -1,3 +1,6 @@
+// December 14, 2016
+// Craig Hesling <craig@hesling.com>
+
 package rest
 
 import (
