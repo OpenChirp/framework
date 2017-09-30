@@ -2,6 +2,8 @@ Main Interface: [![Godoc](https://godoc.org/github.com/OpenChirp/framework?statu
 
 REST Interface: [![Godoc](https://godoc.org/github.com/OpenChirp/framework/rest?status.png)](https://godoc.org/github.com/OpenChirp/framework/rest)
 
+PubSub Interface: [![Godoc](https://godoc.org/github.com/OpenChirp/framework/pubsub?status.png)](https://godoc.org/github.com/OpenChirp/framework/pubsub)
+
 # Description
 This is the Golang [User](user.go), [Device](device.go), and [Service](service.go) client library for the OpenChirp framework.
 
