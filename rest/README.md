@@ -1,4 +1,4 @@
-REST Interface: [![Godoc](https://godoc.org/github.com/OpenChirp/framework/rest?status.png)](https://godoc.org/github.com/OpenChirp/framework/rest)
+[![Godoc](https://godoc.org/github.com/OpenChirp/framework/rest?status.png)](https://godoc.org/github.com/OpenChirp/framework/rest)
 
 # Golang OpenChirp REST library
 This is the pure HTTP REST interface library for OpernChirp.
