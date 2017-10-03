@@ -114,7 +114,7 @@ func (b *Bridge) AddFwd(deviceid, topica string, callback func(pubsubb PubSub, t
 	}
 
 	err := b.pubsuba.Subscribe(topica, func(topic string, payload []byte) {
-		logitem := b.log.WithField("topica", topic)
+		logitem := b.log.WithField("deviceid", deviceid).WithField("topica", topic)
 		logitem.Debugf("Running custom callback on received payload")
 		if err := callback(b.pubsubb, topic, payload); err != nil {
 			logitem.Errorf("Callback reported %v", err)
@@ -171,7 +171,7 @@ func (b *Bridge) AddRev(deviceid, topicb string, callback func(pubsuba PubSub, t
 	}
 
 	err := b.pubsubb.Subscribe(topicb, func(topic string, payload []byte) {
-		logitem := b.log.WithField("topicb", topic)
+		logitem := b.log.WithField("deviceid", deviceid).WithField("topicb", topic)
 		logitem.Debugf("Running custom callback on received payload")
 		if err := callback(b.pubsubb, topic, payload); err != nil {
 			logitem.Errorf("Callback reported %v", err)
