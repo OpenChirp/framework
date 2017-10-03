@@ -123,6 +123,12 @@ func (c *Client) publish(topic string, payload interface{}) error {
 	return token.Error()
 }
 
+// FetchDeviceInfo requests and fetches device information from the REST interface
+func (s *Client) FetchDeviceInfo(deviceID string) (rest.DeviceNode, error) {
+	d, err := s.host.RequestDeviceInfo(deviceID)
+	return d, err
+}
+
 // GetMQTTClient bypasses the service interface and provies the underlying
 // mqtt client context
 // This will be removed in the near future
