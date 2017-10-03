@@ -97,6 +97,34 @@ func (b *Bridge) AddLinkFwd(deviceid, topica string, topicb ...string) error {
 		return err
 	}
 
+	// Commit changes
+	b.devicelinks[deviceid] = ls
+	return nil
+}
+
+func (b *Bridge) AddFwd(deviceid, topica string, callback func(pubsubb PubSub, topica string, payload []byte) error) error {
+	ls, ok := b.devicelinks[deviceid]
+	if !ok {
+		ls = links{make([]string, 0), make([]string, 0)}
+	}
+
+	// Mark down our link
+	if !isIn(ls.fwd, topica) {
+		ls.fwd = append(ls.fwd, topica)
+	}
+
+	err := b.pubsuba.Subscribe(topica, func(topic string, payload []byte) {
+		logitem := b.log.WithField("topica", topic)
+		logitem.Debugf("Running custom callback on received payload")
+		if err := callback(b.pubsubb, topic, payload); err != nil {
+			logitem.Errorf("Callback reported %v", err)
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	// Commit changes
 	b.devicelinks[deviceid] = ls
 	return nil
 }
@@ -128,7 +156,33 @@ func (b *Bridge) AddLinkRev(deviceid, topicb string, topica ...string) error {
 
 	// Commit changes
 	b.devicelinks[deviceid] = ls
+	return nil
+}
 
+func (b *Bridge) AddRev(deviceid, topicb string, callback func(pubsuba PubSub, topicb string, payload []byte) error) error {
+	ls, ok := b.devicelinks[deviceid]
+	if !ok {
+		ls = links{make([]string, 0), make([]string, 0)}
+	}
+
+	// Mark down our link
+	if !isIn(ls.rev, topicb) {
+		ls.rev = append(ls.rev, topicb)
+	}
+
+	err := b.pubsubb.Subscribe(topicb, func(topic string, payload []byte) {
+		logitem := b.log.WithField("topicb", topic)
+		logitem.Debugf("Running custom callback on received payload")
+		if err := callback(b.pubsubb, topic, payload); err != nil {
+			logitem.Errorf("Callback reported %v", err)
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	// Commit changes
+	b.devicelinks[deviceid] = ls
 	return nil
 }
 
