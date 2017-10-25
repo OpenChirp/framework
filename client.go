@@ -128,10 +128,3 @@ func (s *Client) FetchDeviceInfo(deviceID string) (rest.DeviceNode, error) {
 	d, err := s.host.RequestDeviceInfo(deviceID)
 	return d, err
 }
-
-// GetMQTTClient bypasses the service interface and provies the underlying
-// mqtt client context
-// This will be removed in the near future
-func (s *Client) GetMQTTClient() *MQTT.Client {
-	return &s.mqtt
-}
