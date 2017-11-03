@@ -4,6 +4,11 @@ import (
 	"github.com/openchirp/framework/rest"
 )
 
+const (
+	// TransducerPrefix is the device subtopic prefix for loggable topics
+	TransducerPrefix = "transducer"
+)
+
 // DeviceClient represents the context for a single user device session
 type DeviceClient struct {
 	Client
