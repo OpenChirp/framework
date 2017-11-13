@@ -141,7 +141,7 @@ func (m *serviceManager) deviceUnsubscribeAll(dState *deviceState) {
 
 func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...string) {
 	for _, subtopic := range subtopics {
-		topic := devicePrefix + dState.id + "/" + subtopic
+		topic := devicePrefix + "/" + dState.id + "/" + subtopic
 		if _, ok := dState.subs[topic]; ok {
 			m.c.Unsubscribe(topic)
 			delete(dState.subs, topic)
@@ -150,7 +150,7 @@ func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...str
 }
 
 func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, key interface{}) {
-	stopic := devicePrefix + dState.id + "/" + subtopic
+	stopic := devicePrefix + "/" + dState.id + "/" + subtopic
 	if _, ok := dState.subs[stopic]; !ok {
 		m.c.Subscribe(stopic, func(topic string, payload []byte) {
 			msg := Message{
@@ -170,7 +170,7 @@ func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, k
 }
 
 func (m *serviceManager) devicePublish(dState *deviceState, subtopic string, payload interface{}) {
-	topic := devicePrefix + dState.id + "/" + subtopic
+	topic := devicePrefix + "/" + dState.id + "/" + subtopic
 	m.c.Publish(topic, payload)
 }
 
@@ -256,7 +256,7 @@ func (c *DeviceControl) Unsubscribe(subtopics ...string) {
 	c.manager.deviceUnsubscribe(c.dState, subtopics...)
 }
 
-func (c *DeviceControl) Publish(subtopic string, payload []interface{}) {
+func (c *DeviceControl) Publish(subtopic string, payload interface{}) {
 	c.manager.devicePublish(c.dState, subtopic, payload)
 }
 
@@ -271,11 +271,11 @@ func (t Message) String() string {
 }
 
 func (t Message) Key() interface{} {
-	return t.Key
+	return t.key
 }
 
 func (t Message) Topic() interface{} {
-	return t.Topic
+	return t.topic
 }
 
 func (t Message) Payload() interface{} {
