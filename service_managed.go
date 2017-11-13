@@ -94,13 +94,15 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			m.deviceCtrlsCacheAdd(deviceid, dCtrl)
 		}
 
-		if !dState.userDevice.ProcessConfigChange(dCtrl, cchanges, coriginal) {
+		status, ack := dState.userDevice.ProcessConfigChange(dCtrl, cchanges, coriginal)
+		if !ack {
 			// If the user refused to acknowledge a config update - we will
 			// remove and re-add
 			m.removeDevice(deviceid)
 			m.addUpdateDevice(deviceid, config)
 			return
 		}
+		m.c.SetDeviceStatus(dState.id, status)
 	} else {
 		dState := &deviceState{
 			id:         deviceid,
@@ -111,7 +113,8 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 		m.devices[deviceid] = dState
 		dCtrl := m.generateDeviceCtrl(dState)
 		m.deviceCtrlsCacheAdd(deviceid, dCtrl)
-		dState.userDevice.ProcessLink(dCtrl)
+		status := dState.userDevice.ProcessLink(dCtrl)
+		m.c.SetDeviceStatus(dState.id, status)
 	}
 }
 
@@ -230,9 +233,9 @@ func StartServiceClientManaged(
 }
 
 type Device interface {
-	ProcessLink(ctrl *DeviceControl)
+	ProcessLink(ctrl *DeviceControl) string
 	ProcessUnlink(ctrl *DeviceControl)
-	ProcessConfigChange(ctrl *DeviceControl, cchanges, coriginal map[string]string) bool
+	ProcessConfigChange(ctrl *DeviceControl, cchanges, coriginal map[string]string) (string, bool)
 	ProcessMessage(ctrl *DeviceControl, msg Message)
 }
 
