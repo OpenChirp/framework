@@ -81,6 +81,12 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			m.addUpdateDevice(deviceid, config)
 			return
 		}
+
+		if len(cchanges) == 0 {
+			// If no changes are necessary, we are done
+			return
+		}
+
 		dState.config = config
 
 		if !dCtrlExists {
@@ -278,7 +284,7 @@ func (t Message) Topic() interface{} {
 	return t.topic
 }
 
-func (t Message) Payload() interface{} {
+func (t Message) Payload() []byte {
 	return t.payload
 }
 
@@ -297,7 +303,7 @@ func configChanges(original, new map[string]string) (map[string]string, bool) {
 	for k, v := range original {
 		if nv, ok := m[k]; ok && (v == nv) {
 			delete(m, k)
-		} else if ok {
+		} else if !ok {
 			// when a key is missing from the new config, we assign it ""
 			omittedKey = true
 			m[k] = ""
