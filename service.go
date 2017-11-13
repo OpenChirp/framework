@@ -91,6 +91,11 @@ type ServiceClient struct {
 	updatesRunning bool
 	updatesQueue   chan DeviceUpdate
 	updates        chan DeviceUpdate
+	manager        serviceRuntimeManager
+}
+
+type serviceRuntimeManager interface {
+	Stop()
 }
 
 /*
@@ -172,6 +177,9 @@ func StartServiceClientStatus(frameworkuri, brokeruri, id, token, statusmsg stri
 
 // StopClient shuts down a started service
 func (c *ServiceClient) StopClient() {
+	if c.manager != nil {
+		c.manager.Stop()
+	}
 	c.stopClient()
 }
 
