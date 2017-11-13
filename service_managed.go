@@ -262,6 +262,10 @@ func (c *DeviceControl) Unsubscribe(subtopics ...string) {
 	c.manager.deviceUnsubscribe(c.dState, subtopics...)
 }
 
+func (c *DeviceControl) UnsubscribeAll() {
+	c.manager.deviceUnsubscribeAll(c.dState)
+}
+
 func (c *DeviceControl) Publish(subtopic string, payload interface{}) {
 	c.manager.devicePublish(c.dState, subtopic, payload)
 }
