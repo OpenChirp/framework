@@ -22,6 +22,8 @@ type serviceManager struct {
 	wg          sync.WaitGroup
 }
 
+// runtime is the primary service manager routine that handles device service
+// config and link changes
 func (m *serviceManager) runtime() {
 	defer m.wg.Done()
 
@@ -67,12 +69,15 @@ func (m *serviceManager) deviceCtrlsCacheAdd(deviceid string, dCtrl *DeviceContr
 	m.deviceCtrls.Add(lru.Key(deviceid), dCtrl)
 }
 
+/* Service Manager Event Functions */
+
 func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]string) {
 	dState, dStateExists := m.devices[deviceid]
 	dCtrl, dCtrlExists := m.deviceCtrlsCacheGet(deviceid)
 	if dStateExists {
 		coriginal := dState.config
 		cchanges, missingKeys := configChanges(coriginal, config)
+		// Find config differences
 		if missingKeys {
 			// Do not allow keys to be missing, since we do not expect users to
 			// to understand missing keys on updates - we will remove and re-add
@@ -82,6 +87,7 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			return
 		}
 
+		// Check that key/values actually changed
 		if len(cchanges) == 0 {
 			// If no changes are necessary, we are done
 			return
@@ -102,8 +108,11 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			m.addUpdateDevice(deviceid, config)
 			return
 		}
+
+		// Update device's service link status
 		m.c.SetDeviceStatus(dState.id, status)
 	} else {
+		// Create a new device context
 		dState := &deviceState{
 			id:         deviceid,
 			config:     config,
@@ -141,6 +150,7 @@ func (m *serviceManager) generateDeviceCtrl(dState *deviceState) *DeviceControl 
 	}
 }
 
+// deviceUnsubscribe unsubscribes from topics within the device's subtopic space
 func (m *serviceManager) deviceUnsubscribeAll(dState *deviceState) {
 	for topic, _ := range dState.subs {
 		m.c.Unsubscribe(topic)
@@ -148,6 +158,7 @@ func (m *serviceManager) deviceUnsubscribeAll(dState *deviceState) {
 	}
 }
 
+// deviceUnsubscribe unsubscribes from topics within the device's subtopic space
 func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...string) {
 	for _, subtopic := range subtopics {
 		topic := devicePrefix + "/" + dState.id + "/" + subtopic
@@ -158,6 +169,9 @@ func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...str
 	}
 }
 
+// deviceSubscribe subscribes to a topic within the device's subtopic space.
+// Messages received on the subscribed topic will be sent to the device's
+// ProcessMessage handler with the specified key and subtopic.
 func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, key interface{}) {
 	stopic := devicePrefix + "/" + dState.id + "/" + subtopic
 	if _, ok := dState.subs[stopic]; !ok {
@@ -172,12 +186,14 @@ func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, k
 				dCtrl = m.generateDeviceCtrl(dState)
 				m.deviceCtrlsCacheAdd(dState.id, dCtrl)
 			}
+			// Run device message handler
 			dState.userDevice.ProcessMessage(dCtrl, msg)
 		})
 		dState.subs[stopic] = key
 	}
 }
 
+// devicePublish publishes to a topic within the device's subtopic space
 func (m *serviceManager) devicePublish(dState *deviceState, subtopic string, payload interface{}) {
 	topic := devicePrefix + "/" + dState.id + "/" + subtopic
 	m.c.Publish(topic, payload)
@@ -232,10 +248,30 @@ func StartServiceClientManaged(
 	return c, nil
 }
 
+// Device is the interface services will implement
 type Device interface {
+	// ProcessLink is called once, during the initial setup of a
+	// device with the service config. The service is expected to parse the
+	// provided config for initial setup. The returned string is used as the
+	// device's link status.
 	ProcessLink(ctrl *DeviceControl) string
+	// ProcessUnlink is called once, when the service has been unlinked from
+	// the device.
 	ProcessUnlink(ctrl *DeviceControl)
+	// ProcessConfigChange is called only when the config has truly changed.
+	// The specific config key/values which changed are provided in cchange
+	// and the original config is provided in coriginal. Upon successful
+	// completion of this call, the device's link status will be updated with
+	// the returned string.
+	//
+	// If you do not want to handle incremental config changes, you may return
+	// false. In this case, the service manager will restore the original
+	// config, call for the device to be unlinked(ProcessUnlinked), clear the
+	// device context, and call ProcessLink with the new config.
+	// Note that the new config is accessible through ctrl.Config()
 	ProcessConfigChange(ctrl *DeviceControl, cchanges, coriginal map[string]string) (string, bool)
+	// ProcessMessage is called upon receiving a pubsub message destined for
+	// this device
 	ProcessMessage(ctrl *DeviceControl, msg Message)
 }
 
@@ -249,53 +285,65 @@ type DeviceControl struct {
 	dState  *deviceState
 }
 
+// Id returns this device's id
 func (c *DeviceControl) Id() string {
 	return c.dState.id
 }
 
+// Config returns this device's current config
 func (c *DeviceControl) Config() map[string]string {
 	return c.dState.config
 }
 
+// Subscribe
 func (c *DeviceControl) Subscribe(subtopic string, key interface{}) {
 	c.manager.deviceSubscribe(c.dState, subtopic, key)
 }
 
+// Unsubscribe unsubscribes from the specified device's subtopics
 func (c *DeviceControl) Unsubscribe(subtopics ...string) {
 	c.manager.deviceUnsubscribe(c.dState, subtopics...)
 }
 
+// UnsubscribeAll unsubscribes from all of this device's subtopics
 func (c *DeviceControl) UnsubscribeAll() {
 	c.manager.deviceUnsubscribeAll(c.dState)
 }
 
+// Publish publishes payload to this device's subtopic
 func (c *DeviceControl) Publish(subtopic string, payload interface{}) {
 	c.manager.devicePublish(c.dState, subtopic, payload)
 }
 
+// Message holds a received pubsub payload and topic along with the
+// provided subscription key
 type Message struct {
 	key     interface{}
 	topic   string
 	payload []byte
 }
 
+// String shows all parts of the message as a human readable string
 func (t Message) String() string {
 	return fmt.Sprintf("%v: %s: [ % #xv ]", t.key, t.topic, t.payload)
 }
 
+// Key returns the provided subscription key for this message
 func (t Message) Key() interface{} {
 	return t.key
 }
 
+// Topic returns the pubsub subtopic which received this message
 func (t Message) Topic() interface{} {
 	return t.topic
 }
 
+// Payload returns the pubsub payload of this message
 func (t Message) Payload() []byte {
 	return t.payload
 }
 
-// Returns a map of only the keys that changed.
+// configChanges returns a map of only the keys that changed.
 // If keys were deleted from the newer config, the return bool will be true.
 func configChanges(original, new map[string]string) (map[string]string, bool) {
 	var omittedKey bool
