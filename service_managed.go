@@ -2,6 +2,8 @@ package framework
 
 import (
 	"fmt"
+	"log"
+	"strings"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -50,6 +52,12 @@ func (m *serviceManager) Stop() {
 	m.c.manager = nil
 }
 
+/* DeviceControl Cache */
+
+func (m *serviceManager) deviceCtrlsCacheAdd(dCtrl *DeviceControl) {
+	m.deviceCtrls.Add(lru.Key(dCtrl.Id), dCtrl)
+}
+
 func (m *serviceManager) deviceCtrlsCacheGet(deviceid string) (*DeviceControl, bool) {
 	dCtrlInt, dCtrlExists := m.deviceCtrls.Get(lru.Key(deviceid))
 	if dCtrlExists {
@@ -65,23 +73,27 @@ func (m *serviceManager) deviceCtrlsCacheRemove(deviceid string) {
 	m.deviceCtrls.Remove(lru.Key(deviceid))
 }
 
-func (m *serviceManager) deviceCtrlsCacheAdd(deviceid string, dCtrl *DeviceControl) {
-	m.deviceCtrls.Add(lru.Key(deviceid), dCtrl)
+func (m *serviceManager) deviceCtrlsCacheProvide(dState *deviceState) *DeviceControl {
+	dCtrlInt, dCtrlExists := m.deviceCtrls.Get(lru.Key(dState.id))
+	if !dCtrlExists {
+		dCtrlInt = m.generateDeviceCtrl(dState)
+		m.deviceCtrlsCacheAdd(dCtrlInt.(*DeviceControl))
+	}
+	// TODO: Should probably assert that the dCtrl.dStat == m.devices[deviceid]
+	return dCtrlInt.(*DeviceControl)
 }
 
 /* Service Manager Event Functions */
 
 func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]string) {
-	dState, dStateExists := m.devices[deviceid]
-	dCtrl, dCtrlExists := m.deviceCtrlsCacheGet(deviceid)
-	if dStateExists {
-		coriginal := dState.config
-		cchanges, missingKeys := configChanges(coriginal, config)
+	if dState, dStateExists := m.devices[deviceid]; dStateExists {
 		// Find config differences
+		cchanges, missingKeys := configChanges(dState.config, config)
 		if missingKeys {
 			// Do not allow keys to be missing, since we do not expect users to
 			// to understand missing keys on updates - we will remove and re-add
 			// TODO: Should probably log, since this may be a REST bug
+			log.Printf("missing keys, but the changes were: %v", cchanges)
 			m.removeDevice(deviceid)
 			m.addUpdateDevice(deviceid, config)
 			return
@@ -93,18 +105,27 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			return
 		}
 
+		// Save original config
+		coriginal := dState.config
+
+		// Set new config
 		dState.config = config
 
-		if !dCtrlExists {
-			dCtrl = m.generateDeviceCtrl(dState)
-			m.deviceCtrlsCacheAdd(deviceid, dCtrl)
-		}
+		// Fetch a device control
+		dCtrl := m.deviceCtrlsCacheProvide(dState)
 
+		// Allow service to handle incremental config change
 		status, ack := dState.userDevice.ProcessConfigChange(dCtrl, cchanges, coriginal)
 		if !ack {
 			// If the user refused to acknowledge a config update - we will
-			// remove and re-add
+			// remove and re-add the link
+			// 1. Restore original config
+			dState.config = coriginal
+			// 2. Run through removal process
 			m.removeDevice(deviceid)
+			// 3. Set new config
+			dState.config = config
+			// 4. Run through add process
 			m.addUpdateDevice(deviceid, config)
 			return
 		}
@@ -120,23 +141,30 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			userDevice: m.newdevice(),
 		}
 		m.devices[deviceid] = dState
-		dCtrl := m.generateDeviceCtrl(dState)
-		m.deviceCtrlsCacheAdd(deviceid, dCtrl)
+
+		// Fetch a device control
+		dCtrl := m.deviceCtrlsCacheProvide(dState)
+
+		// Process link
 		status := dState.userDevice.ProcessLink(dCtrl)
+
+		// Update device's service link status
 		m.c.SetDeviceStatus(dState.id, status)
 	}
+
 }
 
 func (m *serviceManager) removeDevice(deviceid string) {
-	dState, dStateExists := m.devices[deviceid]
-	dCtrl, dCtrlExists := m.deviceCtrlsCacheGet(deviceid)
-	if dStateExists {
-		if !dCtrlExists {
-			dCtrl = m.generateDeviceCtrl(dState)
-			m.deviceCtrlsCacheAdd(deviceid, dCtrl)
-		}
+	if dState, dStateExists := m.devices[deviceid]; dStateExists {
+		// Fecth a device control
+		dCtrl := m.deviceCtrlsCacheProvide(dState)
+
+		// Process unlink
 		dState.userDevice.ProcessUnlink(dCtrl)
+
+		// Delete device context
 		delete(m.devices, deviceid)
+
 		// We must remove dCtrl from cache, since we will be creating a new
 		// deviceState.
 		m.deviceCtrlsCacheRemove(deviceid)
@@ -152,21 +180,27 @@ func (m *serviceManager) generateDeviceCtrl(dState *deviceState) *DeviceControl 
 
 // deviceUnsubscribe unsubscribes from topics within the device's subtopic space
 func (m *serviceManager) deviceUnsubscribeAll(dState *deviceState) {
-	for topic, _ := range dState.subs {
-		m.c.Unsubscribe(topic)
-		delete(dState.subs, topic)
+	// Create a flat array of device subscribed topics
+	topics := make([]string, 0, len(dState.subs))
+	for topic := range dState.subs {
+		topics = append(topics, topic)
 	}
+	// Unsubscribe from all device subscribed topics
+	m.c.Unsubscribe(topics...)
+	// Reset device's subscription list
+	dState.subs = make(map[string]interface{})
 }
 
 // deviceUnsubscribe unsubscribes from topics within the device's subtopic space
 func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...string) {
-	for _, subtopic := range subtopics {
+	// Prepend the device endpoint and remove from device subscription list
+	for i, subtopic := range subtopics {
 		topic := devicePrefix + "/" + dState.id + "/" + subtopic
-		if _, ok := dState.subs[topic]; ok {
-			m.c.Unsubscribe(topic)
-			delete(dState.subs, topic)
-		}
+		subtopics[i] = topic
+		delete(dState.subs, topic)
 	}
+	// Unsubscribe from specified topics
+	m.c.Unsubscribe(subtopics...)
 }
 
 // deviceSubscribe subscribes to a topic within the device's subtopic space.
@@ -176,16 +210,16 @@ func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, k
 	stopic := devicePrefix + "/" + dState.id + "/" + subtopic
 	if _, ok := dState.subs[stopic]; !ok {
 		m.c.Subscribe(stopic, func(topic string, payload []byte) {
+			// Get the device level subtopic
+			subtopic := strings.TrimPrefix(topic, devicePrefix+"/"+dState.id)
+			// Compose message for device message handler
 			msg := Message{
 				key:     key,
-				topic:   topic,
+				topic:   subtopic,
 				payload: payload,
 			}
-			dCtrl, dCtrlExists := m.deviceCtrlsCacheGet(dState.id)
-			if !dCtrlExists {
-				dCtrl = m.generateDeviceCtrl(dState)
-				m.deviceCtrlsCacheAdd(dState.id, dCtrl)
-			}
+			// Fetch a device control object device message handler
+			dCtrl := m.deviceCtrlsCacheProvide(dState)
 			// Run device message handler
 			dState.userDevice.ProcessMessage(dCtrl, msg)
 		})
