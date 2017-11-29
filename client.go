@@ -63,6 +63,53 @@ func (c *Client) setWill(topic string, payload []byte) {
 	c.willPayload = payload
 }
 
+/*
+	From the documentation on NewClientOptions, ClientOptions are
+	created with the following defaults:
+		Port: 1883
+		CleanSession: True
+		Order: True
+		KeepAlive: 30 (seconds)
+		ConnectTimeout: 30 (seconds)
+		MaxReconnectInterval 10 (minutes)
+		AutoReconnect: True
+
+	From the documentation of other ClientOptions receivers:
+		SetStore will set the implementation of the Store interface used to
+		         provide message persistence in cases where QoS levels
+		         QoS_ONE or QoS_TWO are used. If no store is provided, then
+		         the client will use MemoryStore by default.
+		SetMessageChannelDepth sets the size of the internal queue that
+		                       holds messages while the client is temporairily
+		                       offline, allowing the application to publish
+		                       when the client is reconnecting. This setting
+		                       is only valid if AutoReconnect is set to true,
+		                       it is otherwise ignored.
+		SetPingTimeout will set the amount of time (in seconds) that
+		               the client will wait after sending a PING request to
+		               the broker, before deciding that the connection has
+		               been lost.
+		               Default is 10 seconds.
+		SetWriteTimeout puts a limit on how long a mqtt
+		                publish should block until it unblocks with a timeout
+		                error. A duration of 0 never times out.
+		                Default 30 seconds
+		SetMaxReconnectInterval sets the maximum time that will be waited
+		                        between reconnection attempts when connection
+		                        is lost
+		SetKeepAlive will set the amount of time (in seconds) that the
+		             client should wait before sending a PING request
+		             to the broker. This will allow the client to know
+		             that a connection has not been lost with the server.
+		SetConnectTimeout limits how long the client will wait when trying
+		                  to open a connection to an MQTT server before
+		                  imeing out and erroring the attempt. A duration
+		                  of 0 never times out. Default 30 seconds.
+		                  Currently only operational on TCP/TLS connections.
+		SetAutoReconnect sets whether the automatic reconnection logic should
+		                 be used when the connection is lost, even if disabled
+		                 the ConnectionLostHandler is still called
+*/
 func (c *Client) startMQTT(brokeruri string) error {
 	/* Connect the MQTT connection */
 	opts := MQTT.NewClientOptions().AddBroker(brokeruri)
