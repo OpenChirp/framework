@@ -167,6 +167,9 @@ func (m *serviceManager) removeDevice(deviceid string) {
 		// Process unlink
 		dState.userDevice.ProcessUnlink(dCtrl)
 
+		// Unsubscribe from all remaining topics
+		m.deviceUnsubscribeAll(dState)
+
 		// Delete device context
 		delete(m.devices, deviceid)
 
