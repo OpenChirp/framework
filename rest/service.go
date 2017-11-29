@@ -4,6 +4,7 @@
 package rest
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -150,4 +151,92 @@ func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceList
 	}
 	err = json.NewDecoder(resp.Body).Decode(&serviceDeviceListItems)
 	return serviceDeviceListItems, err
+}
+
+// ServiceCreate makes an HTTP POST request to the framework server
+// in order to create a new service with
+func (host Host) ServiceCreate(
+	name, description string,
+	properties map[string]string, // can be nil
+	configParams []ServiceConfigParameter, // can be nil
+) (ServiceNode, error) {
+	var serviceNode ServiceNode
+	uri := host.uri + rootAPISubPath + servicesSubPath
+	serviceReq := ServiceCreateRequest{
+		Name:        name,
+		Description: description,
+	}
+	if properties != nil {
+		serviceReq.Properties = properties
+	}
+	if configParams != nil {
+		serviceReq.ConfigParameters = configParams
+	}
+	body, err := json.Marshal(&serviceReq)
+	if err != nil {
+		return serviceNode, err
+	}
+	fmt.Println("Request is:", string(body))
+	req, err := http.NewRequest("POST", uri, bytes.NewReader(body))
+	if err != nil {
+		return serviceNode, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return serviceNode, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return serviceNode, fmt.Errorf(resp.Status)
+	}
+
+	// FIXME: Have to change the owner field slightly because of the REST interface.
+	var hackServiceNode struct {
+		OwnerID          string                   `json:"owner"`
+		Name             string                   `json:"name"`
+		ID               string                   `json:"id"`
+		Pubsub           PubSub                   `json:"pubsub"`
+		Description      string                   `json:"description"`
+		Properties       map[string]string        `json:"properties"`
+		ConfigParameters []ServiceConfigParameter `json:"config_required"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&hackServiceNode)
+
+	// FIXME: FIx this owner workaround
+	serviceNode.Owner.Id = hackServiceNode.OwnerID
+	serviceNode.Name = hackServiceNode.Name
+	serviceNode.ID = hackServiceNode.ID
+	serviceNode.Pubsub = hackServiceNode.Pubsub
+	serviceNode.Description = hackServiceNode.Description
+	serviceNode.Properties = hackServiceNode.Properties
+	serviceNode.ConfigParameters = hackServiceNode.ConfigParameters
+
+	return serviceNode, err
+}
+
+// ServiceDelete makes an HTTP DELETE request to the framework server
+// on the specified serviceid
+func (host Host) ServiceDelete(serviceid string) error {
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
+	req, err := http.NewRequest("DELETE", uri, nil)
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return fmt.Errorf(resp.Status)
+	}
+	return nil
 }
