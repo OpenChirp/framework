@@ -209,6 +209,8 @@ func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...str
 }
 
 // deviceSubscribe subscribes to a topic within the device's subtopic space.
+// Currently, only the first call to subscribe to a particular topic is used.
+//
 // Messages received on the subscribed topic will be sent to the device's
 // ProcessMessage handler with the specified key and subtopic.
 func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, key interface{}) {
