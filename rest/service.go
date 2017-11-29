@@ -73,6 +73,9 @@ func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 	var serviceNode ServiceNode
 	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
 	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return serviceNode, err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceid)
@@ -82,6 +85,9 @@ func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 		return serviceNode, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return serviceNode, fmt.Errorf(resp.Status)
+	}
 	err = json.NewDecoder(resp.Body).Decode(&serviceNode)
 	return serviceNode, err
 }
@@ -92,6 +98,9 @@ func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceList
 	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid + serviceDevicesSubPath
 	fmt.Println("Service URI: ", uri)
 	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return serviceDeviceListItems, err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	resp, err := host.client.Do(req)
@@ -100,6 +109,9 @@ func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceList
 		return serviceDeviceListItems, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return serviceDeviceListItems, fmt.Errorf(resp.Status)
+	}
 	err = json.NewDecoder(resp.Body).Decode(&serviceDeviceListItems)
 	return serviceDeviceListItems, err
 }

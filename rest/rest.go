@@ -20,6 +20,10 @@ const (
 	userSubPath           = "/user"
 )
 
+const (
+	httpStatusCodeOK = 200
+)
+
 const jsonPrettyIndent = "  "
 
 // Host represents the RESTful HTTP server that hosts the framework
