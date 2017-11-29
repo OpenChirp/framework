@@ -7,9 +7,7 @@
 package rest
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -44,41 +42,6 @@ func (host *Host) Login(username, password string) error {
 	host.pass = password
 	// TODO: Check login credentials -- return error if no good
 	return nil
-}
-
-// RequestDeviceInfo makes an HTTP GET to the framework server requesting
-// the Device Node information for the device with ID deviceid.
-func (host Host) RequestDeviceInfo(deviceid string) (DeviceNode, error) {
-	var deviceNode DeviceNode
-	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceid
-	fmt.Println("DevURI:", uri)
-	req, err := http.NewRequest("GET", uri, nil)
-	req.SetBasicAuth(host.user, host.pass)
-
-	// resp, err := http.Get(uri)
-	resp, err := host.client.Do(req)
-	if err != nil {
-		// should report auth problems here in future
-		return deviceNode, err
-	}
-	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&deviceNode)
-	return deviceNode, err
-}
-
-// RequestDeviceInfo makes an HTTP GET to the framework server requesting
-// the Device Node information for device with ID deviceid.
-func (host Host) ExecuteCommand(deviceID, commandID string) error {
-	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/command/" + commandID
-	req, err := http.NewRequest("POST", uri, bytes.NewReader([]byte("{}")))
-	req.SetBasicAuth(host.user, host.pass)
-
-	// resp, err := http.Get(uri)
-	resp, err := host.client.Do(req)
-	if err != nil {
-		resp.Body.Close()
-	}
-	return err
 }
 
 // PubSub describes a node's pubsub endpoint
