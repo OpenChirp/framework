@@ -18,7 +18,11 @@ const (
 	deviceSubPath         = "/device"
 	servicesSubPath       = "/service"
 	serviceDevicesSubPath = "/things"
+	locationSubPath       = "/location"
+	userSubPath           = "/user"
 )
+
+const jsonPrettyIndent = "  "
 
 // Host represents the RESTful HTTP server that hosts the framework
 type Host struct {
