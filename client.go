@@ -3,7 +3,7 @@
 // class for the type of interface you need. The parent class is Client.
 // 		Users - StartUserClient()
 // 		Device - StartDeviceClient()
-// 		Service - StartServiceClient()
+// 		Service - StartServiceClientManaged()
 package framework
 
 import (
