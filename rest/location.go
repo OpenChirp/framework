@@ -8,27 +8,14 @@ import (
 	"net/http"
 )
 
-// LocationOwnerNode is a container for Location Owner Node object
-// received from the RESTful JSON interface
-type LocationOwnerNode struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
 // LocationNode is a container for Location Node object received
 // from the RESTful JSON interface
 type LocationNode struct {
-	ID       string            `json:"id"`
-	Name     string            `json:"name"`
-	Owner    LocationOwnerNode `json:"owner"`
-	Children []string          `json:"children"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Owner    Owner    `json:"owner"`
+	Children []string `json:"children"`
 	// We currently omit the geo_loc, timestamps, test, and type
-}
-
-func (n LocationOwnerNode) String() string {
-	buf, _ := json.MarshalIndent(&n, "", jsonPrettyIndent)
-	return string(buf)
 }
 
 func (n LocationNode) String() string {
