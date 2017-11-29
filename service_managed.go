@@ -1,3 +1,8 @@
+// TODO: Handle errors for pubsub methods, although these errors are probably
+// fatal.
+// TODO: Straighten out the case for when a user subscribes
+//       to the same topic twice.
+
 package framework
 
 import (
