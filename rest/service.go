@@ -3,6 +3,12 @@
 
 package rest
 
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
 // ServiceNode is a container for Service Node object received
 // from the RESTful JSON interface
 type ServiceNode struct {
@@ -59,4 +65,41 @@ func (i ServiceDeviceListItem) GetConfigMap() map[string]string {
 		m[v.Key] = v.Value
 	}
 	return m
+}
+
+// RequestServiceInfo makes an HTTP GET to the framework server requesting
+// the Service Node information for service with ID serviceid.
+func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
+	var serviceNode ServiceNode
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
+	req, err := http.NewRequest("GET", uri, nil)
+	req.SetBasicAuth(host.user, host.pass)
+
+	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceid)
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return serviceNode, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&serviceNode)
+	return serviceNode, err
+}
+
+// RequestServiceDeviceList
+func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceListItem, error) {
+	var serviceDeviceListItems = make([]ServiceDeviceListItem, 0)
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid + serviceDevicesSubPath
+	fmt.Println("Service URI: ", uri)
+	req, err := http.NewRequest("GET", uri, nil)
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return serviceDeviceListItems, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&serviceDeviceListItems)
+	return serviceDeviceListItems, err
 }

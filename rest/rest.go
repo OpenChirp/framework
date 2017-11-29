@@ -46,45 +46,8 @@ func (host *Host) Login(username, password string) error {
 	return nil
 }
 
-// RequestServiceInfo makes an HTTP GET to the framework server requesting
-// the Service Node information for service with ID serviceid.
-func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
-	var serviceNode ServiceNode
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
-	req, err := http.NewRequest("GET", uri, nil)
-	req.SetBasicAuth(host.user, host.pass)
-
-	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceid)
-	resp, err := host.client.Do(req)
-	if err != nil {
-		// should report auth problems here in future
-		return serviceNode, err
-	}
-	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&serviceNode)
-	return serviceNode, err
-}
-
-// RequestServiceDeviceList
-func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceListItem, error) {
-	var serviceDeviceListItems = make([]ServiceDeviceListItem, 0)
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid + serviceDevicesSubPath
-	fmt.Println("Service URI: ", uri)
-	req, err := http.NewRequest("GET", uri, nil)
-	req.SetBasicAuth(host.user, host.pass)
-
-	resp, err := host.client.Do(req)
-	if err != nil {
-		// should report auth problems here in future
-		return serviceDeviceListItems, err
-	}
-	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&serviceDeviceListItems)
-	return serviceDeviceListItems, err
-}
-
 // RequestDeviceInfo makes an HTTP GET to the framework server requesting
-// the Device Node information for device with ID deviceid.
+// the Device Node information for the device with ID deviceid.
 func (host Host) RequestDeviceInfo(deviceid string) (DeviceNode, error) {
 	var deviceNode DeviceNode
 	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceid
