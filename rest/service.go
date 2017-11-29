@@ -12,9 +12,17 @@ import (
 // ServiceNode is a container for Service Node object received
 // from the RESTful JSON interface
 type ServiceNode struct {
-	NodeDescriptor                   // Node descriptor of Service Node
-	Description    string            `json:"description"`
-	Properties     map[string]string `json:"properties"`
+	NodeDescriptor                            // Node descriptor of Service Node
+	Description      string                   `json:"description"`
+	Properties       map[string]string        `json:"properties"`
+	ConfigParameters []ServiceConfigParameter `json:"config_required"`
+}
+
+type ServiceCreateRequest struct {
+	Name             string                   `json:"name"`
+	Description      string                   `json:"description"`
+	Properties       map[string]string        `json:"properties,omitempty"`
+	ConfigParameters []ServiceConfigParameter `json:"config_required,omitempty"`
 }
 
 /*
@@ -41,6 +49,13 @@ Services Device Config Requests Look Like The Following:
 ]
 */
 
+type ServiceConfigParameter struct {
+	Name        string `json:"key_name"` // The key_ is redundant
+	Description string `json:"key_description"`
+	Example     string `json:"key_example"`
+	Required    bool   `json:"key_required"`
+}
+
 // KeyValuePair represents the REST interface's internal structure for
 // maps. This is typically just used to parse JSON from the REST interface.
 type KeyValuePair struct {
@@ -65,6 +80,27 @@ func (i ServiceDeviceListItem) GetConfigMap() map[string]string {
 		m[v.Key] = v.Value
 	}
 	return m
+}
+func (n ServiceDeviceListItem) String() string {
+	buf, _ := json.MarshalIndent(&n, "", jsonPrettyIndent)
+	return string(buf)
+}
+
+func (n ServiceNode) String() string {
+	buf, _ := json.MarshalIndent(&n, "", jsonPrettyIndent)
+	return string(buf)
+}
+func (n ServiceCreateRequest) String() string {
+	buf, _ := json.MarshalIndent(&n, "", jsonPrettyIndent)
+	return string(buf)
+}
+func (n ServiceConfigParameter) String() string {
+	buf, _ := json.MarshalIndent(&n, "", jsonPrettyIndent)
+	return string(buf)
+}
+func (n KeyValuePair) String() string {
+	buf, _ := json.MarshalIndent(&n, "", jsonPrettyIndent)
+	return string(buf)
 }
 
 // RequestServiceInfo makes an HTTP GET to the framework server requesting
