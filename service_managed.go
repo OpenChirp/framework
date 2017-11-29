@@ -285,9 +285,9 @@ func StartServiceClientManaged(
 // Device is the interface services will implement
 type Device interface {
 	// ProcessLink is called once, during the initial setup of a
-	// device with the service config. The service is expected to parse the
-	// provided config for initial setup. The returned string is used as the
-	// device's link status.
+	// device, and is provided the service config for the linking device.
+	// The service is expected to parse the provided config for initial setup.
+	// The returned string is used as the device's link status.
 	ProcessLink(ctrl *DeviceControl) string
 	// ProcessUnlink is called once, when the service has been unlinked from
 	// the device.
@@ -305,15 +305,24 @@ type Device interface {
 	// Note that the new config is accessible through ctrl.Config()
 	ProcessConfigChange(ctrl *DeviceControl, cchanges, coriginal map[string]string) (string, bool)
 	// ProcessMessage is called upon receiving a pubsub message destined for
-	// this device
+	// this device. Along with the standard DeviceControl object, the
+	// handler is provided a Message object, which contains the received
+	// message's payload, subtopic, and the provided Subscribe key.
 	ProcessMessage(ctrl *DeviceControl, msg Message)
 }
 
-// DeviceControl aims to provide the Device implementation an error
-// free set of pubsub methods which are scoped to the OC Device's
-// pubsub prefix. Additionally, the subscribe method does not ask for
-// a callback function, since it is the responsibility of the Service client
-// to provide received messages to the Device implementation.
+// DeviceControl provides a simplified set of methods for controlling
+// a single device. A DeviceContol object is provided within the context
+// of a single device.
+// The key uses are to Subscribe/Publish/Unsubscribe (pubsub methods)
+// to a device's subtopic and to present the device's current Config and Id.
+// Understand that the pubsub methods will automatically prepend device's
+// topic prefix (ex. openchirp/devices/<device_id>/) to the specified subtopic.
+//
+// Additionally, you should note that the Pubsub methods do not return errors
+// and do not ask you to provide message handler functions.
+// This shifts the responsibility of error handling and message passing
+// to the Managed Service client.
 type DeviceControl struct {
 	manager *serviceManager
 	dState  *deviceState
@@ -329,7 +338,11 @@ func (c *DeviceControl) Config() map[string]string {
 	return c.dState.config
 }
 
-// Subscribe
+// Subscribe to a device's subtopic and associate with key.
+//
+// When receiving a message for this subtopic, the Device's
+// ProcessMessage handler will be invoked with the message
+// and the this key. See
 func (c *DeviceControl) Subscribe(subtopic string, key interface{}) {
 	c.manager.deviceSubscribe(c.dState, subtopic, key)
 }
