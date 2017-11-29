@@ -13,19 +13,20 @@ import (
 // GroupNode is a container for User Group object received
 // from the RESTful JSON interface
 type GroupNode struct {
-	Name        string `json:"name"`
 	ID          string `json:"group_id"` // Should really just be id
+	Name        string `json:"name"`
 	WriteAccess bool   `json:"write_access"`
 }
 
 // UserNode is a container for User Node object received
 // from the RESTful JSON interface
 type UserNode struct {
-	Name   string      `json:"name"`
-	UserID string      `json:"userid"`
-	Email  string      `json:"email"`
-	Groups []GroupNode `json:"groups"`
 	// We currently omit the _id
+	// TODO: Rename _id to id in REST interface
+	Name   string      `json:"name"`
+	Email  string      `json:"email"`
+	UserID string      `json:"userid"`
+	Groups []GroupNode `json:"groups"`
 }
 
 func (n GroupNode) String() string {
