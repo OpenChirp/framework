@@ -123,7 +123,7 @@ func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != httpStatusCodeOK {
-		return serviceNode, fmt.Errorf(resp.Status)
+		return serviceNode, fmt.Errorf("%v", resp.Status)
 	}
 	err = json.NewDecoder(resp.Body).Decode(&serviceNode)
 	return serviceNode, err
@@ -147,7 +147,7 @@ func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceList
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != httpStatusCodeOK {
-		return serviceDeviceListItems, fmt.Errorf(resp.Status)
+		return serviceDeviceListItems, fmt.Errorf("%v", resp.Status)
 	}
 	err = json.NewDecoder(resp.Body).Decode(&serviceDeviceListItems)
 	return serviceDeviceListItems, err
@@ -191,7 +191,7 @@ func (host Host) ServiceCreate(
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != httpStatusCodeOK {
-		return serviceNode, fmt.Errorf(resp.Status)
+		return serviceNode, fmt.Errorf("%v", resp.Status)
 	}
 
 	// FIXME: Have to change the owner field slightly because of the REST interface.
@@ -236,7 +236,7 @@ func (host Host) ServiceDelete(serviceid string) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != httpStatusCodeOK {
-		return fmt.Errorf(resp.Status)
+		return fmt.Errorf("%v", resp.Status)
 	}
 	return nil
 }
