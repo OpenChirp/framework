@@ -13,17 +13,16 @@ import (
 // DeviceListServiceItem represents the service and service configuration pair
 // found in in a Device Node's service list
 type DeviceListServiceItem struct {
-	ServiceID     string          `json:"serviceid"`
-	ServiceConfig json.RawMessage `json:"serviceconfig"`
+	ServiceID     string         `json:"service_id"`
+	ServiceConfig []KeyValuePair `json:"config"`
 }
 
 // DeviceNode is a container for Device Node object received
 // from the RESTful JSON interface
 type DeviceNode struct {
 	NodeDescriptor                         // Node descriptor of Device Node
-	Data           map[string]interface{}  `json:"data"`
-	Properties     map[string]interface{}  `json:"properties"`
-	Services       []DeviceListServiceItem `json:"services"`
+	Properties     map[string]string       `json:"properties"`
+	Services       []DeviceListServiceItem `json:"linked_services"`
 }
 
 // RequestDeviceInfo makes an HTTP GET to the framework server requesting
