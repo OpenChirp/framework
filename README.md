@@ -1,4 +1,5 @@
 Main Interface: [![Godoc](https://godoc.org/github.com/OpenChirp/framework?status.png)](https://godoc.org/github.com/OpenChirp/framework)
+[![Go Report Card](https://goreportcard.com/badge/github.com/openchirp/framework)](https://goreportcard.com/report/github.com/openchirp/framework)
 
 REST Interface: [![Godoc](https://godoc.org/github.com/OpenChirp/framework/rest?status.png)](https://godoc.org/github.com/OpenChirp/framework/rest)
 
