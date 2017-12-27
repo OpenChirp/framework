@@ -60,7 +60,7 @@ func (m *serviceManager) Stop() {
 /* DeviceControl Cache */
 
 func (m *serviceManager) deviceCtrlsCacheAdd(dCtrl *DeviceControl) {
-	m.deviceCtrls.Add(lru.Key(dCtrl.Id), dCtrl)
+	m.deviceCtrls.Add(lru.Key(dCtrl.Id()), dCtrl)
 }
 
 func (m *serviceManager) deviceCtrlsCacheGet(deviceid string) (*DeviceControl, bool) {
