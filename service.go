@@ -100,7 +100,7 @@ type serviceRuntimeManager interface {
 
 /*
 News Updates Look Like The Following:
-openchirp/services/592880c57d6ec25f901d9668/thing/events:
+openchirp/service/592880c57d6ec25f901d9668/thing/events:
 {
 	"action":"new",
 	"thing":{

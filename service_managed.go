@@ -16,7 +16,7 @@ import (
 
 const (
 	deviceCtrlsCacheSize = 100
-	devicePrefix         = "openchirp/devices"
+	devicePrefix         = "openchirp/device"
 )
 
 type serviceManager struct {
@@ -327,7 +327,7 @@ type Device interface {
 // The key uses are to Subscribe/Publish/Unsubscribe (pubsub methods)
 // to a device's subtopic and to present the device's current Config and Id.
 // Understand that the pubsub methods will automatically prepend device's
-// topic prefix (ex. openchirp/devices/<device_id>/) to the specified subtopic.
+// topic prefix (ex. openchirp/device/<device_id>/) to the specified subtopic.
 //
 // Additionally, you should note that the Pubsub methods do not return errors
 // and do not ask you to provide message handler functions.
