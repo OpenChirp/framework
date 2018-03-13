@@ -113,6 +113,8 @@ openchirp/service/592880c57d6ec25f901d9668/thing/events:
 }
 */
 
+// serviceUpdatesEncapsulation describes the JSON blob provided to services over
+// MQTT as a device update event.
 type serviceUpdatesEncapsulation struct {
 	Action string                     `json:"action"`
 	Device rest.ServiceDeviceListItem `json:"thing"`

@@ -11,7 +11,7 @@ import (
 )
 
 // ServiceNode is a container for Service Node object received
-// from the RESTful JSON interface
+// from the REST interface
 type ServiceNode struct {
 	NodeDescriptor                            // Node descriptor of Service Node
 	Description      string                   `json:"description"`
@@ -19,6 +19,7 @@ type ServiceNode struct {
 	ConfigParameters []ServiceConfigParameter `json:"config_required"`
 }
 
+// ServiceCreateRequest encapsulates the data for a request to create a service
 type ServiceCreateRequest struct {
 	Name             string                   `json:"name"`
 	Description      string                   `json:"description"`
@@ -27,7 +28,7 @@ type ServiceCreateRequest struct {
 }
 
 /*
-Services Device Config Requests Look Like The Following:
+Services Device Config Responses Look Like The Following:
 [
   {
     "id": "592c8a627d6ec25f901d9687",
@@ -50,6 +51,8 @@ Services Device Config Requests Look Like The Following:
 ]
 */
 
+// ServiceConfigParameter represents one required config parameter from the
+// service's information or create service request.
 type ServiceConfigParameter struct {
 	Name        string `json:"key_name"` // The key_ is redundant
 	Description string `json:"key_description"`
@@ -133,7 +136,6 @@ func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceListItem, error) {
 	var serviceDeviceListItems = make([]ServiceDeviceListItem, 0)
 	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid + serviceDevicesSubPath
-	fmt.Println("Service URI: ", uri)
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return serviceDeviceListItems, err
