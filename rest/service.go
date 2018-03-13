@@ -210,27 +210,7 @@ func (host Host) ServiceCreate(
 		return serviceNode, fmt.Errorf("%v", resp.Status)
 	}
 
-	// FIXME: Have to change the owner field slightly because of the REST interface.
-	var hackServiceNode struct {
-		OwnerID          string                   `json:"owner"`
-		Name             string                   `json:"name"`
-		ID               string                   `json:"id"`
-		Pubsub           ServicePubSub            `json:"pubsub"`
-		Description      string                   `json:"description"`
-		Properties       map[string]string        `json:"properties"`
-		ConfigParameters []ServiceConfigParameter `json:"config_required"`
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(&hackServiceNode)
-
-	// FIXME: FIx this owner workaround
-	serviceNode.Owner.Id = hackServiceNode.OwnerID
-	serviceNode.Name = hackServiceNode.Name
-	serviceNode.ID = hackServiceNode.ID
-	serviceNode.Pubsub = hackServiceNode.Pubsub
-	serviceNode.Description = hackServiceNode.Description
-	serviceNode.Properties = hackServiceNode.Properties
-	serviceNode.ConfigParameters = hackServiceNode.ConfigParameters
+	err = json.NewDecoder(resp.Body).Decode(&serviceNode)
 
 	return serviceNode, err
 }
