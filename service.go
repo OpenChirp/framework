@@ -11,9 +11,6 @@ import (
 )
 
 const (
-	eventsSubTopic         = "/thing/events"
-	deviceStatusSubTopic   = "/status"
-	statusSubTopic         = "/status"
 	deviceUpdatesBuffering = 10
 	mqttPersistence        = false // we should never have this enabled
 )
@@ -169,7 +166,7 @@ func StartServiceClientStatus(frameworkuri, brokeruri, id, token, statusmsg stri
 		if err != nil {
 			return nil, ErrMarshalStatusMessage
 		}
-		c.setWill(c.node.Pubsub.Topic+statusSubTopic, []byte(payload))
+		c.setWill(c.node.Pubsub.TopicStatus, []byte(payload))
 	}
 
 	// Start MQTT
@@ -197,7 +194,7 @@ func (c *ServiceClient) SetStatus(msgs ...interface{}) error {
 	if err != nil {
 		return ErrMarshalStatusMessage
 	}
-	return c.Publish(c.node.Pubsub.Topic+statusSubTopic, payload)
+	return c.Publish(c.node.Pubsub.TopicStatus, payload)
 }
 
 // SetDeviceStatus publishes a device's linked service status message
@@ -209,7 +206,7 @@ func (c *ServiceClient) SetDeviceStatus(id string, msgs ...interface{}) error {
 	if err != nil {
 		return ErrMarshalDeviceStatusMessage
 	}
-	return c.Publish(c.node.Pubsub.Topic+deviceStatusSubTopic, payload)
+	return c.Publish(c.node.Pubsub.TopicStatus, payload)
 }
 
 func (c *ServiceClient) updateEventsHandler() func(topic string, payload []byte) {
@@ -248,7 +245,7 @@ func (c *ServiceClient) updateEventsHandler() func(topic string, payload []byte)
 
 func (c *ServiceClient) startDeviceUpdatesQueue() error {
 	/* Setup MQTT based device updates to feed updatesQueue */
-	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
+	topicEvents := c.node.Pubsub.TopicEvents
 	if c.updatesRunning {
 		return ErrDeviceUpdatesAlreadyStarted
 	}
@@ -263,7 +260,7 @@ func (c *ServiceClient) startDeviceUpdatesQueue() error {
 }
 
 func (c *ServiceClient) stopDeviceUpdatesQueue() error {
-	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
+	topicEvents := c.node.Pubsub.TopicEvents
 	if c.updatesRunning {
 		return ErrDeviceUpdatesNotStarted
 	}
@@ -348,7 +345,7 @@ func (c *ServiceClient) StartDeviceUpdates() (<-chan DeviceUpdate, error) {
 // StopDeviceUpdates unsubscribes from service news topic and closes the
 // news channel
 func (c *ServiceClient) StopDeviceUpdates() {
-	topicEvents := c.node.Pubsub.Topic + eventsSubTopic
+	topicEvents := c.node.Pubsub.TopicEvents
 	c.Unsubscribe(topicEvents)
 	close(c.updatesQueue)
 	for _ = range c.updates {

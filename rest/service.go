@@ -60,8 +60,8 @@ Services Device Config Responses Look Like The Following:
 // topic related to a service
 type ServicePubSub struct {
 	PubSub
-	EventsTopic string `json:"events_endpoint"`
-	StatusTopic string `json:"status_endpoint"`
+	TopicEvents string `json:"events_endpoint"`
+	TopicStatus string `json:"status_endpoint"`
 }
 
 // ServiceConfigParameter represents one required config parameter from the
