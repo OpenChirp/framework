@@ -7,7 +7,6 @@
 package rest
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
@@ -50,9 +49,8 @@ func (host *Host) Login(username, password string) error {
 
 // PubSub describes a node's pubsub endpoint
 type PubSub struct {
-	Protocol  string          `json:"protocol"`
-	Topic     string          `json:"endpoint"`
-	ExtraJunk json.RawMessage `json:"serviceconfig"`
+	Protocol string `json:"protocol"`
+	Topic    string `json:"endpoint"`
 }
 
 // Owner describes the owning user's details

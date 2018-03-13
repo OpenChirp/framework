@@ -106,6 +106,10 @@ openchirp/service/592880c57d6ec25f901d9668/thing/events:
 	"thing":{
 		"type":"device",
 		"id":"5930aaf27d6ec25f901d96da",
+		"pubsub": {
+			"protocol": "MQTT",
+			"endpoint": openchirp/device/592880c57d6ec25f901d9668"
+		},
 		"config":[
 			{"key":"rxconfig","value":"[]"},
 			{"key":"txconfig","value":"[]"}]

@@ -14,6 +14,7 @@ import (
 // from the REST interface
 type ServiceNode struct {
 	NodeDescriptor                            // Node descriptor of Service Node
+	Pubsub           ServicePubSub            `json:"pubsub"` // Override NodeDescriptor.Pubsub
 	Description      string                   `json:"description"`
 	Properties       map[string]string        `json:"properties"`
 	ConfigParameters []ServiceConfigParameter `json:"config_required"`
@@ -32,7 +33,11 @@ Services Device Config Responses Look Like The Following:
 [
   {
     "id": "592c8a627d6ec25f901d9687",
-    "type": "device",
+	"type": "device",
+	"pubsub": {
+		"protocol": "MQTT",
+		"endpoint": openchirp/device/592880c57d6ec25f901d9668"
+	},
     "config": [
       {
         "key": "DevEUI",
@@ -50,6 +55,14 @@ Services Device Config Responses Look Like The Following:
   }
 ]
 */
+
+// ServicePubSub override the normal PubSub struct to add the two additional
+// topic related to a service
+type ServicePubSub struct {
+	PubSub
+	EventsTopic string `json:"events_endpoint"`
+	StatusTopic string `json:"status_endpoint"`
+}
 
 // ServiceConfigParameter represents one required config parameter from the
 // service's information or create service request.
@@ -71,6 +84,7 @@ type KeyValuePair struct {
 // found in a Service Node's device list
 type ServiceDeviceListItem struct {
 	Id     string         `json:"id"`
+	PubSub PubSub         `json:"pubsub"`
 	Config []KeyValuePair `json:"config"`
 }
 
@@ -201,7 +215,7 @@ func (host Host) ServiceCreate(
 		OwnerID          string                   `json:"owner"`
 		Name             string                   `json:"name"`
 		ID               string                   `json:"id"`
-		Pubsub           PubSub                   `json:"pubsub"`
+		Pubsub           ServicePubSub            `json:"pubsub"`
 		Description      string                   `json:"description"`
 		Properties       map[string]string        `json:"properties"`
 		ConfigParameters []ServiceConfigParameter `json:"config_required"`
