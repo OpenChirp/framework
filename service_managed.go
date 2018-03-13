@@ -16,7 +16,6 @@ import (
 
 const (
 	deviceCtrlsCacheSize = 100
-	devicePrefix         = "openchirp/device"
 )
 
 type serviceManager struct {
@@ -43,7 +42,7 @@ func (m *serviceManager) runtime() {
 			case DeviceUpdateTypeUpd:
 				fallthrough
 			case DeviceUpdateTypeAdd:
-				m.addUpdateDevice(update.Id, update.Config)
+				m.addUpdateDevice(update.Id, update.Topic, update.Config)
 			}
 		case <-m.shutdown:
 			return
@@ -90,7 +89,7 @@ func (m *serviceManager) deviceCtrlsCacheProvide(dState *deviceState) *DeviceCon
 
 /* Service Manager Event Functions */
 
-func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]string) {
+func (m *serviceManager) addUpdateDevice(deviceid string, topic string, config map[string]string) {
 	if dState, dStateExists := m.devices[deviceid]; dStateExists {
 		// Find config differences
 		cchanges, missingKeys := configChanges(dState.config, config)
@@ -100,7 +99,7 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			// TODO: Should probably log, since this may be a REST bug
 			log.Printf("missing keys, but the changes were: %v", cchanges)
 			m.removeDevice(deviceid)
-			m.addUpdateDevice(deviceid, config)
+			m.addUpdateDevice(deviceid, topic, config)
 			return
 		}
 
@@ -131,7 +130,7 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 			// 3. Set new config
 			dState.config = config
 			// 4. Run through add process
-			m.addUpdateDevice(deviceid, config)
+			m.addUpdateDevice(deviceid, topic, config)
 			return
 		}
 
@@ -141,6 +140,7 @@ func (m *serviceManager) addUpdateDevice(deviceid string, config map[string]stri
 		// Create a new device context
 		dState := &deviceState{
 			id:         deviceid,
+			topic:      topic,
 			config:     config,
 			subs:       make(map[string]interface{}),
 			userDevice: m.newdevice(),
@@ -203,7 +203,7 @@ func (m *serviceManager) deviceUnsubscribeAll(dState *deviceState) {
 func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...string) {
 	// Prepend the device endpoint and remove from device subscription list
 	for i, subtopic := range subtopics {
-		topic := devicePrefix + "/" + dState.id + "/" + subtopic
+		topic := dState.topic + "/" + subtopic
 		subtopics[i] = topic
 		delete(dState.subs, topic)
 	}
@@ -217,11 +217,11 @@ func (m *serviceManager) deviceUnsubscribe(dState *deviceState, subtopics ...str
 // Messages received on the subscribed topic will be sent to the device's
 // ProcessMessage handler with the specified key and subtopic.
 func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, key interface{}) {
-	stopic := devicePrefix + "/" + dState.id + "/" + subtopic
+	stopic := dState.topic + "/" + subtopic
 	if _, ok := dState.subs[stopic]; !ok {
 		m.c.Subscribe(stopic, func(topic string, payload []byte) {
 			// Get the device level subtopic
-			subtopic := strings.TrimPrefix(topic, devicePrefix+"/"+dState.id)
+			subtopic := strings.TrimPrefix(topic, dState.topic)
 			// Compose message for device message handler
 			msg := Message{
 				key:     key,
@@ -239,13 +239,14 @@ func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, k
 
 // devicePublish publishes to a topic within the device's subtopic space
 func (m *serviceManager) devicePublish(dState *deviceState, subtopic string, payload interface{}) {
-	topic := devicePrefix + "/" + dState.id + "/" + subtopic
+	topic := dState.topic + "/" + subtopic
 	m.c.Publish(topic, payload)
 }
 
 type deviceState struct {
 	userDevice Device
 	id         string
+	topic      string
 	config     map[string]string
 	subs       map[string]interface{}
 }

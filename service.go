@@ -62,6 +62,7 @@ func (dut DeviceUpdateType) String() (s string) {
 type DeviceUpdate struct {
 	Type   DeviceUpdateType
 	Id     string
+	Topic  string
 	Config map[string]string
 }
 
@@ -236,6 +237,7 @@ func (c *ServiceClient) updateEventsHandler() func(topic string, payload []byte)
 				devUpdate.Type = DeviceUpdateTypeRem
 			}
 			devUpdate.Id = mqttMsg.Device.Id
+			devUpdate.Topic = mqttMsg.Device.PubSub.Topic
 			devUpdate.Config = mqttMsg.Device.GetConfigMap()
 
 			c.updatesQueue <- devUpdate
@@ -374,6 +376,7 @@ func (c *ServiceClient) FetchDeviceConfigsAsUpdates() ([]DeviceUpdate, error) {
 		updates[i] = DeviceUpdate{
 			Type:   DeviceUpdateTypeAdd,
 			Id:     devConfig.Id,
+			Topic:  devConfig.PubSub.Topic,
 			Config: devConfig.GetConfigMap(),
 		}
 	}
