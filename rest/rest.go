@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	rootAPISubPath        = "/api"
+	rootAPISubPath        = "/apiv1"
 	deviceSubPath         = "/device"
 	servicesSubPath       = "/service"
 	serviceDevicesSubPath = "/things"
