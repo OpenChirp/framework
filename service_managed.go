@@ -392,7 +392,7 @@ func (t Message) Key() interface{} {
 }
 
 // Topic returns the pubsub subtopic which received this message
-func (t Message) Topic() interface{} {
+func (t Message) Topic() string {
 	return t.topic
 }
 
