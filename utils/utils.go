@@ -15,6 +15,9 @@ import (
 // which can give useful information about where the parse error occurred.
 // Example: errColumn := err.(*csv.ParseError).Column
 func ParseCSVConfig(configline string) ([]string, error) {
+	if configline == "" {
+		return []string{}, nil
+	}
 	r := csv.NewReader(strings.NewReader(configline))
 	r.TrimLeadingSpace = true
 	// Call Read only once because there should only be one line
