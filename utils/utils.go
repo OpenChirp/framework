@@ -10,7 +10,10 @@ import (
 
 // ParseCSVConfig parses a single config field that follows comma and
 // optional quotes seperated syntax into it's constituent tokens
-// Possible errors returned are from the encoding/csv package
+// Possible errors returned are from the encoding/csv package.
+// The error can be referenced by it's concrete type *csv.ParseError,
+// which can give useful information about where the parse error occurred.
+// Example: errColumn := err.(*csv.ParseError).Column
 func ParseCSVConfig(configline string) ([]string, error) {
 	r := csv.NewReader(strings.NewReader(configline))
 	r.TrimLeadingSpace = true
