@@ -23,3 +23,11 @@ The pure http rest interface is exposed as the Golang [rest](rest) package.
 
 ## PubSub
 The pure pubsub(MQTT) interface is exposed as the Golang [pubsub](pubsub) package.
+## PubSub
+The pure pubsub(MQTT) interface is exposed as the Golang [pubsub](pubsub) package.
+
+## Utilities
+The [utils](utils) package holds functions and data structures commonly used
+across applications interfacing with OpenChirp.
+
+[![Godoc](https://godoc.org/github.com/OpenChirp/framework/utils?status.png)](https://godoc.org/github.com/OpenChirp/framework/utils)
