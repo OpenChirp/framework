@@ -26,10 +26,10 @@ type DeviceNode struct {
 }
 
 // RequestDeviceInfo makes an HTTP GET to the framework server requesting
-// the Device Node information for the device with ID deviceid.
-func (host Host) RequestDeviceInfo(deviceid string) (DeviceNode, error) {
+// the Device Node information for the device with ID deviceID.
+func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
 	var deviceNode DeviceNode
-	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceid
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID
 	fmt.Println("DevURI:", uri)
 	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
@@ -46,7 +46,7 @@ func (host Host) RequestDeviceInfo(deviceid string) (DeviceNode, error) {
 }
 
 // ExecuteCommand makes an HTTP POST to the framework server to execute the
-// specified commmandID on device deviceID.
+// specified commandID on device deviceID.
 func (host Host) ExecuteCommand(deviceID, commandID string) error {
 	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/command/" + commandID
 	req, err := http.NewRequest("POST", uri, bytes.NewReader([]byte("{}")))
