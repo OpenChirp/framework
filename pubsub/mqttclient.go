@@ -43,12 +43,12 @@ func ParseMQTTQoS(QoS string) MQTTQoS {
 }
 
 // genClientID generates a random client id for mqtt
-func (c MQTTClient) genClientID() (string, error) {
+func (c MQTTClient) genClientID(prefix string) (string, error) {
 	r, err := CRAND.Int(CRAND.Reader, new(big.Int).SetInt64(100000))
 	if err != nil {
 		return "", err
 	}
-	return "client" + r.String(), nil
+	return prefix + r.String(), nil
 }
 
 // NewMQTTClient creates and connects an MQTT client that implements the
@@ -63,7 +63,7 @@ func NewMQTTClient(
 	c.defaultPersistence = defaultPersistence
 
 	/* Generate random client id for MQTT */
-	clientID, err := c.genClientID()
+	clientID, err := c.genClientID("client")
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +79,51 @@ func NewMQTTClient(
 		opts.SetUsername(user).SetPassword(pass)
 	}
 	opts.SetAutoReconnect(defaultAutoReconnect)
+
+	/* Create and start a client using the above ClientOptions */
+	c.mqtt = PahoMQTT.NewClient(opts)
+	if token := c.mqtt.Connect(); token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+
+	return c, nil
+}
+
+// NewMQTTBridgeClient creates and connects an MQTT client that implements the
+// PubSub interface. This special variant will indicate to the broker that you
+// are operating as a MQTT bridge. In this case, you will not receive an echo
+// of messages you publish to a topic you have subscribed to.
+// Note, this is not an official MQTT feature and is only supported by a few
+// brokers.
+// Checkout https://github.com/mqtt/mqtt.github.io/wiki/bridge_protocol
+// for more info.
+func NewMQTTBridgeClient(
+	brokerURI, user, pass string,
+	defaultQoS MQTTQoS,
+	defaultPersistence bool) (*MQTTClient, error) {
+
+	c := new(MQTTClient)
+	c.defaultQoS = defaultQoS
+	c.defaultPersistence = defaultPersistence
+
+	/* Generate random client id for MQTT */
+	clientID, err := c.genClientID("bridge")
+	if err != nil {
+		return nil, err
+	}
+
+	/* Connect the MQTT connection */
+	opts := PahoMQTT.NewClientOptions().AddBroker(brokerURI)
+	opts.SetClientID(clientID)
+	// http://www.hivemq.com/blog/mqtt-security-fundamentals-authentication-username-password:
+	//   "The spec also states that a username without password is possible.
+	//    It’s not possible to just send a password without username."
+	if len(user) > 0 {
+		// we do not allow absent passwords yet
+		opts.SetUsername(user).SetPassword(pass)
+	}
+	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetProtocolVersion(4 | 0x80) // indicate bridge
 
 	/* Create and start a client using the above ClientOptions */
 	c.mqtt = PahoMQTT.NewClient(opts)
