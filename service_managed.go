@@ -62,19 +62,19 @@ func (m *serviceManager) deviceCtrlsCacheAdd(dCtrl *DeviceControl) {
 	m.deviceCtrls.Add(lru.Key(dCtrl.Id()), dCtrl)
 }
 
-func (m *serviceManager) deviceCtrlsCacheGet(deviceid string) (*DeviceControl, bool) {
-	dCtrlInt, dCtrlExists := m.deviceCtrls.Get(lru.Key(deviceid))
+func (m *serviceManager) deviceCtrlsCacheGet(deviceID string) (*DeviceControl, bool) {
+	dCtrlInt, dCtrlExists := m.deviceCtrls.Get(lru.Key(deviceID))
 	if dCtrlExists {
 		if dCtrl, ok := dCtrlInt.(*DeviceControl); ok {
-			// TODO: Should probably assert that the dCtrl.dStat == m.devices[deviceid]
+			// TODO: Should probably assert that the dCtrl.dStat == m.devices[deviceID]
 			return dCtrl, true
 		}
 	}
 	return nil, false
 }
 
-func (m *serviceManager) deviceCtrlsCacheRemove(deviceid string) {
-	m.deviceCtrls.Remove(lru.Key(deviceid))
+func (m *serviceManager) deviceCtrlsCacheRemove(deviceID string) {
+	m.deviceCtrls.Remove(lru.Key(deviceID))
 }
 
 func (m *serviceManager) deviceCtrlsCacheProvide(dState *deviceState) *DeviceControl {
@@ -89,8 +89,8 @@ func (m *serviceManager) deviceCtrlsCacheProvide(dState *deviceState) *DeviceCon
 
 /* Service Manager Event Functions */
 
-func (m *serviceManager) addUpdateDevice(deviceid string, topic string, config map[string]string) {
-	if dState, dStateExists := m.devices[deviceid]; dStateExists {
+func (m *serviceManager) addUpdateDevice(deviceID string, topic string, config map[string]string) {
+	if dState, dStateExists := m.devices[deviceID]; dStateExists {
 		// Find config differences
 		cchanges, missingKeys := configChanges(dState.config, config)
 		if missingKeys {
@@ -98,8 +98,8 @@ func (m *serviceManager) addUpdateDevice(deviceid string, topic string, config m
 			// to understand missing keys on updates - we will remove and re-add
 			// TODO: Should probably log, since this may be a REST bug
 			log.Printf("missing keys, but the changes were: %v", cchanges)
-			m.removeDevice(deviceid)
-			m.addUpdateDevice(deviceid, topic, config)
+			m.removeDevice(deviceID)
+			m.addUpdateDevice(deviceID, topic, config)
 			return
 		}
 
@@ -126,11 +126,11 @@ func (m *serviceManager) addUpdateDevice(deviceid string, topic string, config m
 			// 1. Restore original config
 			dState.config = coriginal
 			// 2. Run through removal process
-			m.removeDevice(deviceid)
+			m.removeDevice(deviceID)
 			// 3. Set new config
 			dState.config = config
 			// 4. Run through add process
-			m.addUpdateDevice(deviceid, topic, config)
+			m.addUpdateDevice(deviceID, topic, config)
 			return
 		}
 
@@ -139,13 +139,13 @@ func (m *serviceManager) addUpdateDevice(deviceid string, topic string, config m
 	} else {
 		// Create a new device context
 		dState := &deviceState{
-			id:         deviceid,
+			id:         deviceID,
 			topic:      topic,
 			config:     config,
 			subs:       make(map[string]interface{}),
 			userDevice: m.newdevice(),
 		}
-		m.devices[deviceid] = dState
+		m.devices[deviceID] = dState
 
 		// Fetch a device control
 		dCtrl := m.deviceCtrlsCacheProvide(dState)
@@ -159,9 +159,9 @@ func (m *serviceManager) addUpdateDevice(deviceid string, topic string, config m
 
 }
 
-func (m *serviceManager) removeDevice(deviceid string) {
-	if dState, dStateExists := m.devices[deviceid]; dStateExists {
-		// Fecth a device control
+func (m *serviceManager) removeDevice(deviceID string) {
+	if dState, dStateExists := m.devices[deviceID]; dStateExists {
+		// Fetch a device control
 		dCtrl := m.deviceCtrlsCacheProvide(dState)
 
 		// Process unlink
@@ -171,11 +171,11 @@ func (m *serviceManager) removeDevice(deviceid string) {
 		m.deviceUnsubscribeAll(dState)
 
 		// Delete device context
-		delete(m.devices, deviceid)
+		delete(m.devices, deviceID)
 
 		// We must remove dCtrl from cache, since we will be creating a new
 		// deviceState.
-		m.deviceCtrlsCacheRemove(deviceid)
+		m.deviceCtrlsCacheRemove(deviceID)
 	}
 }
 
@@ -254,8 +254,8 @@ type deviceState struct {
 // StartServiceClientManaged starts the service client layer using the fully
 // managed mode
 func StartServiceClientManaged(
-	frameworkuri,
-	brokeruri,
+	frameworkURI,
+	brokerURI,
 	id,
 	token,
 	statusmsg string,
@@ -266,7 +266,7 @@ func StartServiceClientManaged(
 		return nil, fmt.Errorf("Error: newdevice cannot be nil")
 	}
 
-	c, err := StartServiceClientStatus(frameworkuri, brokeruri, id, token, statusmsg)
+	c, err := StartServiceClientStatus(frameworkURI, brokerURI, id, token, statusmsg)
 	if err != nil {
 		return nil, err
 	}

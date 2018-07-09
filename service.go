@@ -134,21 +134,21 @@ type serviceDeviceStatus struct {
 }
 
 // StartServiceClient starts the service management layer
-func StartServiceClient(frameworkuri, brokeruri, id, token string) (*ServiceClient, error) {
-	c, err := StartServiceClientStatus(frameworkuri, brokeruri, id, token, "")
+func StartServiceClient(frameworkURI, brokerURI, id, token string) (*ServiceClient, error) {
+	c, err := StartServiceClientStatus(frameworkURI, brokerURI, id, token, "")
 	return c, err
 }
 
 // StartServiceClientStatus starts the service management layer with a optional
 // statusmsg if the service disconnects improperly
-func StartServiceClientStatus(frameworkuri, brokeruri, id, token, statusmsg string) (*ServiceClient, error) {
+func StartServiceClientStatus(frameworkURI, brokerURI, id, token, statusmsg string) (*ServiceClient, error) {
 	var err error
 
 	c := new(ServiceClient)
 
 	// Start enough of the client manually to get REST working
 	c.setAuth(id, token)
-	err = c.startREST(frameworkuri)
+	err = c.startREST(frameworkURI)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func StartServiceClientStatus(frameworkuri, brokeruri, id, token, statusmsg stri
 	}
 
 	// Start MQTT
-	err = c.startMQTT(brokeruri)
+	err = c.startMQTT(brokerURI)
 	if err != nil {
 		return nil, err
 	}
@@ -272,12 +272,12 @@ func (c *ServiceClient) stopDeviceUpdatesQueue() error {
 
 	// Unblock all possible updateEventsHandlers while we wait
 	go func() {
-		for _ = range c.updatesQueue {
+		for range c.updatesQueue {
 			// read all remaining elements in order to close chan and go routines
 		}
 		c.updatesQueue = nil
 	}()
-	// wait for all activivley running routines to finish writing to channel
+	// wait for all actively running routines to finish writing to channel
 	c.updatesWg.Wait()
 	close(c.updatesQueue)
 	return nil
@@ -350,7 +350,7 @@ func (c *ServiceClient) StopDeviceUpdates() {
 	topicEvents := c.node.Pubsub.TopicEvents
 	c.Unsubscribe(topicEvents)
 	close(c.updatesQueue)
-	for _ = range c.updates {
+	for range c.updates {
 		// read all remaining elements in order to close chan and go routine
 	}
 }
@@ -414,8 +414,7 @@ func (c *ServiceClient) GetProperties() map[string]string {
 // GetProperty fetches the service property associated with key. If it does
 // not exist the blank string is returned.
 func (c *ServiceClient) GetProperty(key string) string {
-	value, ok := c.node.Properties[key]
-	if ok {
+	if value, ok := c.node.Properties[key]; ok {
 		return value
 	}
 	return ""
