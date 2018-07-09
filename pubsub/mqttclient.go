@@ -31,19 +31,11 @@ const (
 
 func ParseMQTTQoS(QoS string) MQTTQoS {
 	switch QoS {
-	case "QoSAtMostOnce":
-		fallthrough
-	case "0":
+	case "QoSAtMostOnce", "0":
 		return QoSAtMostOnce
-
-	case "QoSAtLeastOnce":
-		fallthrough
-	case "1":
+	case "QoSAtLeastOnce", "1":
 		return QoSAtLeastOnce
-
-	case "QoSExactlyOnce":
-		fallthrough
-	case "2":
+	case "QoSExactlyOnce", "2":
 		return QoSExactlyOnce
 	default:
 		return QoSUnknown
