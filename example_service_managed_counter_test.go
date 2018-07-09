@@ -38,10 +38,10 @@ func NewCDevice() framework.Device {
 // ProcessLink is called once, during the initial setup of a
 // device, and is provided the service config for the linking device.
 func (d *CDevice) ProcessLink(ctrl *framework.DeviceControl) string {
-	// Subscribe to subtopic "transducer/rawrx"
-	ctrl.Subscribe(framework.TransducerPrefix+"/rawrx", rawRxKey)
-	// Subscribe to subtopic "transducer/rawtx"
-	ctrl.Subscribe(framework.TransducerPrefix+"/rawtx", rawTxKey)
+	// Subscribe to subtopic "rawrx"
+	ctrl.Subscribe("rawrx", rawRxKey)
+	// Subscribe to subtopic "rawtx"
+	ctrl.Subscribe("rawtx", rawTxKey)
 
 	// This message is sent to the service status for the linking device
 	return "Success"
@@ -81,11 +81,11 @@ func (d *CDevice) ProcessMessage(ctrl *framework.DeviceControl, msg framework.Me
 
 	if msg.Key().(int) == rawRxKey {
 		d.rawRxCount++
-		subtopic := framework.TransducerPrefix + "/rawrxcount"
+		subtopic := "rawrxcount"
 		ctrl.Publish(subtopic, fmt.Sprint(d.rawRxCount))
 	} else if msg.Key().(int) == rawTxKey {
 		d.rawTxCount++
-		subtopic := framework.TransducerPrefix + "/rawtxcount"
+		subtopic := "rawtxcount"
 		ctrl.Publish(subtopic, fmt.Sprint(d.rawTxCount))
 	} else {
 		log.Fatalln("Received unassociated message")
