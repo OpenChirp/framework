@@ -51,8 +51,10 @@ func (c MQTTClient) genClientID() (string, error) {
 	return "client" + r.String(), nil
 }
 
+// NewMQTTClient creates and connects an MQTT client that implements the
+// PubSub interface
 func NewMQTTClient(
-	brokeruri, user, pass string,
+	brokerURI, user, pass string,
 	defaultQoS MQTTQoS,
 	defaultPersistence bool) (*MQTTClient, error) {
 
@@ -61,14 +63,14 @@ func NewMQTTClient(
 	c.defaultPersistence = defaultPersistence
 
 	/* Generate random client id for MQTT */
-	clinetid, err := c.genClientID()
+	clientID, err := c.genClientID()
 	if err != nil {
 		return nil, err
 	}
 
 	/* Connect the MQTT connection */
-	opts := PahoMQTT.NewClientOptions().AddBroker(brokeruri)
-	opts.SetClientID(clinetid)
+	opts := PahoMQTT.NewClientOptions().AddBroker(brokerURI)
+	opts.SetClientID(clientID)
 	// http://www.hivemq.com/blog/mqtt-security-fundamentals-authentication-username-password:
 	//   "The spec also states that a username without password is possible.
 	//    It’s not possible to just send a password without username."
