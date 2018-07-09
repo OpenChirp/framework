@@ -221,7 +221,7 @@ func (m *serviceManager) deviceSubscribe(dState *deviceState, subtopic string, k
 	if _, ok := dState.subs[stopic]; !ok {
 		m.c.Subscribe(stopic, func(topic string, payload []byte) {
 			// Get the device level subtopic
-			subtopic := strings.TrimPrefix(topic, dState.topic)
+			subtopic := strings.TrimPrefix(topic, dState.topic+"/")
 			// Compose message for device message handler
 			msg := Message{
 				key:     key,
