@@ -14,10 +14,15 @@ import (
 	"github.com/openchirp/framework/rest"
 )
 
+// MQTTBridgeClient sets whether the MQTT client will identify itself as a
+// bridge to the broker
+var MQTTBridgeClient = false
+
 const (
-	mqttAutoReconnect      = true
-	mqttQoS           byte = 2
-	mqttRetained           = false
+	mqttAutoReconnect        = true
+	mqttQoS             byte = 2
+	mqttRetained             = false
+	mqttProtocolVersion uint = 4
 )
 
 // ClientTopicHandler is a function prototype for a subscribed topic callback
@@ -102,7 +107,14 @@ func (c *Client) setWill(topic string, payload []byte) {
 func (c *Client) startMQTT(brokerURI string) error {
 	/* Connect the MQTT connection */
 	opts := MQTT.NewClientOptions().AddBroker(brokerURI)
-	clientID, err := pubsub.GenMQTTClientID("client")
+
+	var prefix = "client"
+	opts.SetProtocolVersion(mqttProtocolVersion)
+	if MQTTBridgeClient {
+		prefix = "bridge"
+		opts.SetProtocolVersion(mqttProtocolVersion | 0x80)
+	}
+	clientID, err := pubsub.GenMQTTClientID(prefix)
 	if err != nil {
 		log.Fatal(err)
 	}
