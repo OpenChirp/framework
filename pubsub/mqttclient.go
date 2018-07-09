@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"fmt"
 	"math/big"
 
 	CRAND "crypto/rand"
@@ -9,7 +10,7 @@ import (
 )
 
 const (
-	// Sets whether AutoReonnect will be set
+	// Sets whether AutoReconnect will be set
 	defaultAutoReconnect bool = true
 	disconnectWaitMS     uint = 300
 )
@@ -42,11 +43,11 @@ func ParseMQTTQoS(QoS string) MQTTQoS {
 	}
 }
 
-// genClientID generates a random client id for mqtt
-func (c MQTTClient) genClientID(prefix string) (string, error) {
+// GenMQTTClientID generates a random client id for mqtt
+func GenMQTTClientID(prefix string) (string, error) {
 	r, err := CRAND.Int(CRAND.Reader, new(big.Int).SetInt64(100000))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to generate MQTT client ID: %v", err)
 	}
 	return prefix + r.String(), nil
 }
@@ -63,7 +64,7 @@ func NewMQTTClient(
 	c.defaultPersistence = defaultPersistence
 
 	/* Generate random client id for MQTT */
-	clientID, err := c.genClientID("client")
+	clientID, err := GenMQTTClientID("client")
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +108,7 @@ func NewMQTTBridgeClient(
 	c.defaultPersistence = defaultPersistence
 
 	/* Generate random client id for MQTT */
-	clientID, err := c.genClientID("bridge")
+	clientID, err := GenMQTTClientID("bridge")
 	if err != nil {
 		return nil, err
 	}
