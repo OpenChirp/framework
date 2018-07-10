@@ -14,7 +14,7 @@ import (
 // found in in a Device Node's service list
 type DeviceListServiceItem struct {
 	ServiceID     string         `json:"service_id"`
-	ServiceConfig []KeyValuePair `json:"config"`
+	ServiceConfig []KeyValuePair `json:"config"` // should be omitempty, but bug doesn't allow it
 }
 
 // DeviceNode is a container for Device Node object received
@@ -34,7 +34,6 @@ func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
 	req, err := http.NewRequest("GET", uri, nil)
 	req.SetBasicAuth(host.user, host.pass)
 
-	// resp, err := http.Get(uri)
 	resp, err := host.client.Do(req)
 	if err != nil {
 		// should report auth problems here in future
@@ -43,6 +42,60 @@ func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(&deviceNode)
 	return deviceNode, err
+}
+
+// RequestLinkedService makes an HTTP POST to the framework server to link the
+// specified serviceID to device deviceID.
+func (host Host) RequestLinkedService(deviceID, serviceID string) (DeviceListServiceItem, error) {
+	var deviceServiceItem DeviceListServiceItem
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/service/" + serviceID
+	req, err := http.NewRequest("GET", uri, nil)
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		return deviceServiceItem, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&deviceServiceItem)
+	return deviceServiceItem, err
+}
+
+// LinkService makes an HTTP POST to the framework server to link the
+// specified serviceID to device deviceID.
+func (host Host) LinkService(deviceID, serviceID string, config []KeyValuePair) error {
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/service/" + serviceID
+	body, err := json.Marshal(DeviceListServiceItem{
+		ServiceID:     serviceID,
+		ServiceConfig: config,
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", uri, bytes.NewReader(body))
+	req.SetBasicAuth(host.user, host.pass)
+
+	// resp, err := http.Get(uri)
+	resp, err := host.client.Do(req)
+	if err != nil {
+		resp.Body.Close()
+	}
+	return err
+}
+
+// DelinkService makes an HTTP DELETE to the framework server to delink the
+// specified serviceID from device deviceID.
+func (host Host) DelinkService(deviceID, serviceID string) error {
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/service/" + serviceID
+	req, err := http.NewRequest("DELETE", uri, nil)
+	req.SetBasicAuth(host.user, host.pass)
+
+	// resp, err := http.Get(uri)
+	resp, err := host.client.Do(req)
+	if err != nil {
+		resp.Body.Close()
+	}
+	return err
 }
 
 // ExecuteCommand makes an HTTP POST to the framework server to execute the
