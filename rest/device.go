@@ -14,7 +14,7 @@ import (
 // found in in a Device Node's service list
 type DeviceListServiceItem struct {
 	ServiceID     string         `json:"service_id"`
-	ServiceConfig []KeyValuePair `json:"config"` // should be omitempty, but bug doesn't allow it
+	ServiceConfig []KeyValuePair `json:"config,omitempty"`
 }
 
 // DeviceNode is a container for Device Node object received
