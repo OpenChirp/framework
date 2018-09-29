@@ -45,6 +45,9 @@ func (host Host) RequestUserInfo() (UserNode, error) {
 	var userNode UserNode
 	uri := host.uri + rootAPISubPath + userSubPath
 	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return userNode, err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	resp, err := host.client.Do(req)

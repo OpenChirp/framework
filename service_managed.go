@@ -62,17 +62,6 @@ func (m *serviceManager) deviceCtrlsCacheAdd(dCtrl *DeviceControl) {
 	m.deviceCtrls.Add(lru.Key(dCtrl.Id()), dCtrl)
 }
 
-func (m *serviceManager) deviceCtrlsCacheGet(deviceID string) (*DeviceControl, bool) {
-	dCtrlInt, dCtrlExists := m.deviceCtrls.Get(lru.Key(deviceID))
-	if dCtrlExists {
-		if dCtrl, ok := dCtrlInt.(*DeviceControl); ok {
-			// TODO: Should probably assert that the dCtrl.dStat == m.devices[deviceID]
-			return dCtrl, true
-		}
-	}
-	return nil, false
-}
-
 func (m *serviceManager) deviceCtrlsCacheRemove(deviceID string) {
 	m.deviceCtrls.Remove(lru.Key(deviceID))
 }

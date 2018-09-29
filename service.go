@@ -16,9 +16,6 @@ const (
 )
 
 /* Options to be filled in by arguments */
-var mqttBroker string
-var mqttUser string
-var mqttPass string
 var mqttQos uint
 
 var ErrMarshalStatusMessage = errors.New("Failed to marshall status message into JSON")

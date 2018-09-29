@@ -32,6 +32,9 @@ func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
 	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID
 	fmt.Println("DevURI:", uri)
 	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return deviceNode, err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	resp, err := host.client.Do(req)
@@ -50,6 +53,9 @@ func (host Host) RequestLinkedService(deviceID, serviceID string) (DeviceListSer
 	var deviceServiceItem DeviceListServiceItem
 	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/service/" + serviceID
 	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return deviceServiceItem, err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	resp, err := host.client.Do(req)
@@ -73,6 +79,9 @@ func (host Host) LinkService(deviceID, serviceID string, config []KeyValuePair) 
 		return err
 	}
 	req, err := http.NewRequest("POST", uri, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	// resp, err := http.Get(uri)
@@ -88,6 +97,9 @@ func (host Host) LinkService(deviceID, serviceID string, config []KeyValuePair) 
 func (host Host) DelinkService(deviceID, serviceID string) error {
 	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/service/" + serviceID
 	req, err := http.NewRequest("DELETE", uri, nil)
+	if err != nil {
+		return err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	// resp, err := http.Get(uri)
@@ -103,6 +115,9 @@ func (host Host) DelinkService(deviceID, serviceID string) error {
 func (host Host) ExecuteCommand(deviceID, commandID string) error {
 	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/command/" + commandID
 	req, err := http.NewRequest("POST", uri, bytes.NewReader([]byte("{}")))
+	if err != nil {
+		return err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	// resp, err := http.Get(uri)

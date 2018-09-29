@@ -121,7 +121,7 @@ func ExampleStartServiceClientManaged_counter() {
 	log.Println("Published Service Status")
 
 	/* Setup signal channel */
-	signals := make(chan os.Signal)
+	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	/* Wait on a signal */

@@ -34,6 +34,9 @@ func (host Host) RequestLocationInfo(locid string) (LocationNode, error) {
 		uri = host.uri + rootAPISubPath + locationSubPath + "/" + locid
 	}
 	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return locNode, err
+	}
 	req.SetBasicAuth(host.user, host.pass)
 
 	resp, err := host.client.Do(req)
