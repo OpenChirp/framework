@@ -11,3 +11,6 @@ env:
   - GOOS=linux GOARCH=mips
   - GOOS=windows GOARCH=amd64
   - GOOS=darwin GOARCH=amd64
+go_import_path: github.com/openchirp/framework
+# Don't run tests
+script: true
