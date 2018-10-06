@@ -186,3 +186,10 @@ func (c *Client) FetchLocation(locationID string) (rest.LocationNode, error) {
 	loc, err := c.host.RequestLocationInfo(locationID)
 	return loc, err
 }
+
+// FetchLocationDevices fetches the node descriptors for devices at locationID.
+// If recursive is true, all devices at sublocation are included.
+func (c *Client) FetchLocationDevices(locationID string, recursive bool) ([]rest.NodeDescriptor, error) {
+	devices, err := c.host.RequestLocationDevices(locationID, recursive)
+	return devices, err
+}
