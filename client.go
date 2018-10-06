@@ -180,3 +180,9 @@ func (c *Client) FetchDeviceInfo(deviceID string) (rest.DeviceNode, error) {
 	d, err := c.host.RequestDeviceInfo(deviceID)
 	return d, err
 }
+
+// FetchLocation request the information about locationID
+func (c *Client) FetchLocation(locationID string) (rest.LocationNode, error) {
+	loc, err := c.host.RequestLocationInfo(locationID)
+	return loc, err
+}
