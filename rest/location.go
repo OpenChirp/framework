@@ -25,13 +25,13 @@ func (n LocationNode) String() string {
 
 // RequestLocationInfo makes an HTTP GET to the framework server requesting
 // the Location Node information for the location with ID locid.
-func (host Host) RequestLocationInfo(locid string) (LocationNode, error) {
+func (host Host) RequestLocationInfo(locID string) (LocationNode, error) {
 	var locNode LocationNode
 	var uri string
-	if locid == "" {
+	if locID == "" {
 		uri = host.uri + rootAPISubPath + locationSubPath
 	} else {
-		uri = host.uri + rootAPISubPath + locationSubPath + "/" + locid
+		uri = host.uri + rootAPISubPath + locationSubPath + "/" + locID
 	}
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
@@ -45,7 +45,7 @@ func (host Host) RequestLocationInfo(locid string) (LocationNode, error) {
 		return locNode, err
 	}
 	defer resp.Body.Close()
-	if locid == "" {
+	if locID == "" {
 		// TODO: Figure out why the root node is in an array
 		var roots []LocationNode
 		err = json.NewDecoder(resp.Body).Decode(&roots)

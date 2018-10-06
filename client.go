@@ -176,7 +176,7 @@ func (c *Client) publish(topic string, payload interface{}) error {
 }
 
 // FetchDeviceInfo requests and fetches device information from the REST interface
-func (s *Client) FetchDeviceInfo(deviceID string) (rest.DeviceNode, error) {
-	d, err := s.host.RequestDeviceInfo(deviceID)
+func (c *Client) FetchDeviceInfo(deviceID string) (rest.DeviceNode, error) {
+	d, err := c.host.RequestDeviceInfo(deviceID)
 	return d, err
 }
