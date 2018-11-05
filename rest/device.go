@@ -17,11 +17,19 @@ type DeviceListServiceItem struct {
 	ServiceConfig []KeyValuePair `json:"config,omitempty"`
 }
 
+// TransducerInfo describes a transducer within a Device.
+type TransducerInfo struct {
+	Name       string `json:"name"`
+	Unit       string `json:"unit"`
+	IsActuable bool   `json:"is_actuable"`
+}
+
 // DeviceNode is a container for Device Node object received
 // from the RESTful JSON interface
 type DeviceNode struct {
 	NodeDescriptor                         // Node descriptor of Device Node
 	Properties     map[string]string       `json:"properties"`
+	Transducers    []TransducerInfo        `json:"transducers"`
 	Services       []DeviceListServiceItem `json:"linked_services"`
 }
 
