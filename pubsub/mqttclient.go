@@ -3,6 +3,8 @@ package pubsub
 import (
 	"fmt"
 	"math/big"
+	"sync"
+	"time"
 
 	CRAND "crypto/rand"
 
@@ -11,14 +13,17 @@ import (
 
 const (
 	// Sets whether AutoReconnect will be set
-	defaultAutoReconnect bool = true
-	disconnectWaitMS     uint = 300
+	defaultAutoReconnect      bool = true
+	disconnectWaitMS          uint = 300
+	subscribeOnConnectBackoff      = time.Second
 )
 
 type MQTTClient struct {
 	mqtt               PahoMQTT.Client
 	defaultQoS         MQTTQoS
 	defaultPersistence bool
+	lock               sync.Mutex      // lock to ensure topics is consistent with subs
+	topics             map[string]byte // for reconnect subscriptions (byte is QoS)
 }
 
 type MQTTQoS byte
@@ -80,6 +85,7 @@ func NewMQTTClient(
 		opts.SetUsername(user).SetPassword(pass)
 	}
 	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetOnConnectHandler(c.onConnect)
 
 	/* Create and start a client using the above ClientOptions */
 	c.mqtt = PahoMQTT.NewClient(opts)
@@ -124,6 +130,7 @@ func NewMQTTBridgeClient(
 		opts.SetUsername(user).SetPassword(pass)
 	}
 	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetOnConnectHandler(c.onConnect)
 	opts.SetProtocolVersion(4 | 0x80) // indicate bridge
 
 	/* Create and start a client using the above ClientOptions */
@@ -135,22 +142,65 @@ func NewMQTTBridgeClient(
 	return c, nil
 }
 
+// onConnect will be called from within the Paho MQTT library when the
+// the connection is made initially and on reconnect. The function within
+// this library is to resubscribe to topic we originally subscribed to.
+//
+// This function is called from within the mqtt client and should not be
+// capable of deadlocking, since this callback is called from it's own goroutine.
+func (c *MQTTClient) onConnect(client PahoMQTT.Client) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// resubscribe - internal router should have kept original
+	// callbacks intact
+	if token := client.SubscribeMultiple(c.topics, nil); token.Wait() && token.Error() != nil {
+		// start the cycle again
+		if defaultAutoReconnect {
+			client.Disconnect(disconnectWaitMS)
+			time.Sleep(subscribeOnConnectBackoff)
+			client.Connect()
+		}
+	}
+}
+
 func (c *MQTTClient) Disconnect() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.mqtt.Disconnect(disconnectWaitMS)
 }
 
 func (c *MQTTClient) Subscribe(topic string, callback func(topic string, payload []byte)) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	token := c.mqtt.Subscribe(topic, byte(c.defaultQoS), func(client PahoMQTT.Client, msg PahoMQTT.Message) {
 		callback(msg.Topic(), msg.Payload())
 	})
-	token.Wait()
-	return token.Error()
+	if _, err := token.Wait(), token.Error(); err != nil {
+		return err
+	}
+
+	c.topics[topic] = byte(c.defaultQoS)
+
+	return nil
 }
 
 func (c *MQTTClient) Unsubscribe(topics ...string) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	token := c.mqtt.Unsubscribe(topics...)
-	token.Wait()
-	return token.Error()
+	if _, err := token.Wait(), token.Error(); err != nil {
+		return err
+	}
+
+	for _, topic := range topics {
+		delete(c.topics, topic)
+	}
+
+	return nil
 }
 
 func (c *MQTTClient) Publish(topic string, payload interface{}) error {
