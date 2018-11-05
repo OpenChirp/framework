@@ -42,9 +42,9 @@ type DeviceNode struct {
 	Services       []DeviceListServiceItem `json:"linked_services"`
 }
 
-// Copy creates a new copy of the DeviceNode.
+// Clone creates a new copy of the DeviceNode.
 // This is necessary because a DeviceNode has embedded slices.
-func (n *DeviceNode) Copy() DeviceNode {
+func (n *DeviceNode) Clone() DeviceNode {
 	var ret = *n
 	ret.Transducers = []TransducerInfo{}
 	ret.Services = []DeviceListServiceItem{}
