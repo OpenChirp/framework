@@ -42,6 +42,17 @@ type DeviceNode struct {
 	Services       []DeviceListServiceItem `json:"linked_services"`
 }
 
+// Copy creates a new copy of the DeviceNode.
+// This is necessary because a DeviceNode has embedded slices.
+func (n *DeviceNode) Copy() DeviceNode {
+	var ret = *n
+	ret.Transducers = []TransducerInfo{}
+	ret.Services = []DeviceListServiceItem{}
+	copy(ret.Transducers, n.Transducers)
+	copy(ret.Services, n.Services)
+	return ret
+}
+
 // RequestDeviceInfo makes an HTTP GET to the framework server requesting
 // the Device Node information for the device with ID deviceID.
 func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
