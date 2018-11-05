@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	defaultBrokerURI = "tcp://localhost:1883"
 	// Sets whether AutoReconnect will be set
 	defaultAutoReconnect      bool = true
 	disconnectWaitMS          uint = 300
@@ -75,7 +76,11 @@ func NewMQTTClient(
 	}
 
 	/* Connect the MQTT connection */
-	opts := PahoMQTT.NewClientOptions().AddBroker(brokerURI)
+	opts := PahoMQTT.NewClientOptions()
+	if brokerURI == "" {
+		brokerURI = defaultBrokerURI
+	}
+	opts.AddBroker(brokerURI)
 	opts.SetClientID(clientID)
 	// http://www.hivemq.com/blog/mqtt-security-fundamentals-authentication-username-password:
 	//   "The spec also states that a username without password is possible.
@@ -120,7 +125,11 @@ func NewMQTTBridgeClient(
 	}
 
 	/* Connect the MQTT connection */
-	opts := PahoMQTT.NewClientOptions().AddBroker(brokerURI)
+	opts := PahoMQTT.NewClientOptions()
+	if brokerURI == "" {
+		brokerURI = defaultBrokerURI
+	}
+	opts.AddBroker(brokerURI)
 	opts.SetClientID(clientID)
 	// http://www.hivemq.com/blog/mqtt-security-fundamentals-authentication-username-password:
 	//   "The spec also states that a username without password is possible.
