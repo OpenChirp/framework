@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // DeviceListServiceItem represents the service and service configuration pair
@@ -22,6 +23,14 @@ type TransducerInfo struct {
 	Name       string `json:"name"`
 	Unit       string `json:"unit"`
 	IsActuable bool   `json:"is_actuable"`
+}
+
+// TransducerValue holds a transducer description with a single value
+// and timestamp.
+type TransducerValue struct {
+	TransducerInfo
+	Value          string    `json:"value"`
+	ValueTimestamp time.Time `json:"timestamp"`
 }
 
 // DeviceNode is a container for Device Node object received
@@ -53,6 +62,27 @@ func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(&deviceNode)
 	return deviceNode, err
+}
+
+// DeviceTransducerValues makes an HTTP GET to the framework server requesting
+// the transducers last value list for the device with ID deviceID.
+func (host Host) DeviceTransducerValues(deviceID string) ([]TransducerValue, error) {
+	var transducers []TransducerValue
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/transducer"
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return transducers, err
+	}
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return transducers, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&transducers)
+	return transducers, err
 }
 
 // RequestLinkedService makes an HTTP POST to the framework server to link the
