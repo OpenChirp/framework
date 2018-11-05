@@ -68,6 +68,7 @@ func NewMQTTClient(
 	c := new(MQTTClient)
 	c.defaultQoS = defaultQoS
 	c.defaultPersistence = defaultPersistence
+	c.topics = make(map[string]byte)
 
 	/* Generate random client id for MQTT */
 	clientID, err := GenMQTTClientID("client")
@@ -117,6 +118,7 @@ func NewMQTTBridgeClient(
 	c := new(MQTTClient)
 	c.defaultQoS = defaultQoS
 	c.defaultPersistence = defaultPersistence
+	c.topics = make(map[string]byte)
 
 	/* Generate random client id for MQTT */
 	clientID, err := GenMQTTClientID("bridge")
