@@ -43,3 +43,9 @@ func ParseOCValue(value string) interface{} {
 	// Take as string
 	return value
 }
+
+// FormatFloat64 formats the given float64 value using a dynamic precison
+// that looks cleaner when sent back to OpenChirp
+func FormatFloat64(f float64) string {
+	return strconv.FormatFloat(f, 'f', -1, 64)
+}
