@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -94,6 +95,28 @@ func (host Host) DeviceTransducerValues(deviceID string) ([]TransducerValue, err
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(&transducers)
 	return transducers, err
+}
+
+// DeviceTransducerLastValue makes an HTTP GET to the framework server requesting
+// the transducers last value for the device with ID deviceID and transducer
+// with with ID or name transducerID.
+func (host Host) DeviceTransducerLastValue(deviceID, transducerID string) ([]byte, error) {
+	var value []byte
+	uri := host.uri + rootAPISubPath + deviceSubPath + "/" + deviceID + "/transducer/" + transducerID
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return value, err
+	}
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return value, err
+	}
+	defer resp.Body.Close()
+	value, err = ioutil.ReadAll(resp.Body)
+	return value, err
 }
 
 // RequestLinkedService makes an HTTP POST to the framework server to link the
