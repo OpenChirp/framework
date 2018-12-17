@@ -7,9 +7,6 @@
 package framework
 
 import (
-	"log"
-
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/openchirp/framework/pubsub"
 	"github.com/openchirp/framework/rest"
 )
@@ -19,10 +16,9 @@ import (
 var MQTTBridgeClient = false
 
 const (
-	mqttAutoReconnect        = true
-	mqttQoS             byte = 2
-	mqttRetained             = false
-	mqttProtocolVersion uint = 4
+	mqttAutoReconnect                = true
+	mqttQoS           pubsub.MQTTQoS = pubsub.QoSExactlyOnce
+	mqttRetained                     = false
 )
 
 // ClientTopicHandler is a function prototype for a subscribed topic callback
@@ -35,7 +31,7 @@ type Client struct {
 	host        rest.Host
 	willTopic   string
 	willPayload []byte
-	mqtt        MQTT.Client
+	mqtt        *pubsub.MQTTClient
 }
 
 // setAuth sets basic client authentication parameters
@@ -106,31 +102,17 @@ func (c *Client) setWill(topic string, payload []byte) {
 */
 func (c *Client) startMQTT(brokerURI string) error {
 	/* Connect the MQTT connection */
-	opts := MQTT.NewClientOptions().AddBroker(brokerURI)
+	pubsub.AutoReconnect = mqttAutoReconnect
 
-	var prefix = "client"
-	opts.SetProtocolVersion(mqttProtocolVersion)
+	var err error
+	var mqtt *pubsub.MQTTClient
 	if MQTTBridgeClient {
-		prefix = "bridge"
-		opts.SetProtocolVersion(mqttProtocolVersion | 0x80)
+		mqtt, err = pubsub.NewMQTTWillBridgeClient(brokerURI, c.id, c.token, mqttQoS, mqttRetained, c.willTopic, c.willPayload)
+	} else {
+		mqtt, err = pubsub.NewMQTTWillClient(brokerURI, c.id, c.token, mqttQoS, mqttRetained, c.willTopic, c.willPayload)
 	}
-	clientID, err := pubsub.GenMQTTClientID(prefix)
-	if err != nil {
-		log.Fatal(err)
-	}
-	opts.SetClientID(clientID)
-	opts.SetUsername(c.id).SetPassword(c.token)
-	opts.SetAutoReconnect(mqttAutoReconnect)
-	if c.willTopic != "" {
-		opts.SetBinaryWill(c.willTopic, c.willPayload, mqttQoS, mqttRetained)
-	}
-
-	/* Create and start a client using the above ClientOptions */
-	c.mqtt = MQTT.NewClient(opts)
-	if token := c.mqtt.Connect(); token.Wait() && token.Error() != nil {
-		return token.Error()
-	}
-	return nil
+	c.mqtt = mqtt
+	return err
 }
 
 // startClient sets auth, starts REST, and starts MQTT
@@ -149,30 +131,22 @@ func (c *Client) startClient(frameworkURI, brokerURI, id, token string) error {
 
 // stopService shuts down a started client
 func (c *Client) stopClient() {
-	c.mqtt.Disconnect(0)
+	c.mqtt.Disconnect()
 }
 
 // subscribe registers a callback for a receiving a given mqtt topic payload
 func (c *Client) subscribe(topic string, callback ClientTopicHandler) error {
-	token := c.mqtt.Subscribe(topic, byte(mqttQos), func(client MQTT.Client, message MQTT.Message) {
-		callback(message.Topic(), message.Payload())
-	})
-	token.Wait()
-	return token.Error()
+	return c.mqtt.Subscribe(topic, callback)
 }
 
 // unsubscribe deregisters a callback for a given mqtt topics
 func (c *Client) unsubscribe(topics ...string) error {
-	token := c.mqtt.Unsubscribe(topics...)
-	token.Wait()
-	return token.Error()
+	return c.mqtt.Unsubscribe(topics...)
 }
 
 // publish publishes a payload to a given mqtt topic
 func (c *Client) publish(topic string, payload interface{}) error {
-	token := c.mqtt.Publish(topic, byte(mqttQos), mqttPersistence, payload)
-	token.Wait()
-	return token.Error()
+	return c.mqtt.Publish(topic, payload)
 }
 
 // FetchDeviceInfo requests and fetches device information from the REST interface
