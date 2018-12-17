@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
-	"time"
 
 	CRAND "crypto/rand"
 
@@ -12,9 +11,8 @@ import (
 )
 
 const (
-	defaultBrokerURI               = "tcp://localhost:1883"
-	disconnectWaitMS          uint = 300
-	subscribeOnConnectBackoff      = time.Second
+	defaultBrokerURI      = "tcp://localhost:1883"
+	disconnectWaitMS uint = 300
 )
 
 var (
@@ -285,14 +283,12 @@ func (c *MQTTClient) onConnect(client PahoMQTT.Client) {
 	c.publock.Lock()
 	defer c.publock.Unlock()
 
-	// resubscribe - internal router should have kept original
-	// callbacks intact
-	if token := client.SubscribeMultiple(c.topics, nil); token.Wait() && token.Error() != nil {
-		// start the cycle again
-		if AutoReconnect {
-			client.Disconnect(disconnectWaitMS)
-			time.Sleep(subscribeOnConnectBackoff)
-			client.Connect()
+	fmt.Println("onConnect")
+
+	if len(c.topics) > 0 {
+		// resubscribe - internal router should have kept original
+		// callbacks intact
+		if token := client.SubscribeMultiple(c.topics, nil); token.Wait() && token.Error() != nil {
 			return // don't signal that we have a connection yet
 		}
 	}
