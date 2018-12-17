@@ -12,11 +12,7 @@ import (
 
 const (
 	deviceUpdatesBuffering = 10
-	mqttPersistence        = false // we should never have this enabled
 )
-
-/* Options to be filled in by arguments */
-var mqttQos uint
 
 var ErrMarshalStatusMessage = errors.New("Failed to marshall status message into JSON")
 var ErrMarshalDeviceStatusMessage = errors.New("Failed to marshall device status message into JSON")
