@@ -102,6 +102,55 @@ func NewMQTTClient(
 	return c, nil
 }
 
+// NewMQTTWillClient creates and connects an MQTT client that implements the
+// PubSub interface and sets a will message.
+func NewMQTTWillClient(
+	brokerURI, user, pass string,
+	defaultQoS MQTTQoS,
+	defaultPersistence bool,
+	willTopic string,
+	willPayload []byte) (*MQTTClient, error) {
+
+	c := new(MQTTClient)
+	c.defaultQoS = defaultQoS
+	c.defaultPersistence = defaultPersistence
+	c.topics = make(map[string]byte)
+
+	/* Generate random client id for MQTT */
+	clientID, err := GenMQTTClientID("client")
+	if err != nil {
+		return nil, err
+	}
+
+	/* Connect the MQTT connection */
+	opts := PahoMQTT.NewClientOptions()
+	if brokerURI == "" {
+		brokerURI = defaultBrokerURI
+	}
+	opts.AddBroker(brokerURI)
+	opts.SetClientID(clientID)
+	// http://www.hivemq.com/blog/mqtt-security-fundamentals-authentication-username-password:
+	//   "The spec also states that a username without password is possible.
+	//    It’s not possible to just send a password without username."
+	if len(user) > 0 {
+		// we do not allow absent passwords yet
+		opts.SetUsername(user).SetPassword(pass)
+	}
+	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetOnConnectHandler(c.onConnect)
+	if willTopic != "" {
+		opts.SetBinaryWill(willTopic, willPayload, byte(defaultQoS), defaultPersistence)
+	}
+
+	/* Create and start a client using the above ClientOptions */
+	c.mqtt = PahoMQTT.NewClient(opts)
+	if token := c.mqtt.Connect(); token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+
+	return c, nil
+}
+
 // NewMQTTBridgeClient creates and connects an MQTT client that implements the
 // PubSub interface. This special variant will indicate to the broker that you
 // are operating as a MQTT bridge. In this case, you will not receive an echo
@@ -143,6 +192,63 @@ func NewMQTTBridgeClient(
 	opts.SetAutoReconnect(defaultAutoReconnect)
 	opts.SetOnConnectHandler(c.onConnect)
 	opts.SetProtocolVersion(4 | 0x80) // indicate bridge
+
+	/* Create and start a client using the above ClientOptions */
+	c.mqtt = PahoMQTT.NewClient(opts)
+	if token := c.mqtt.Connect(); token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+
+	return c, nil
+}
+
+// NewMQTTWillBridgeClient creates and connects an MQTT client that implements
+// the PubSub interface and sets a will message.
+// This special variant will indicate to the broker that you are operating as
+// a MQTT bridge. In this case, you will not receive an echo of messages you
+// publish to a topic you have subscribed to.
+// Note, this is not an official MQTT feature and is only supported by a few
+// brokers.
+// Checkout https://github.com/mqtt/mqtt.github.io/wiki/bridge_protocol
+// for more info.
+func NewMQTTWillBridgeClient(
+	brokerURI, user, pass string,
+	defaultQoS MQTTQoS,
+	defaultPersistence bool,
+	willTopic string,
+	willPayload []byte) (*MQTTClient, error) {
+
+	c := new(MQTTClient)
+	c.defaultQoS = defaultQoS
+	c.defaultPersistence = defaultPersistence
+	c.topics = make(map[string]byte)
+
+	/* Generate random client id for MQTT */
+	clientID, err := GenMQTTClientID("bridge")
+	if err != nil {
+		return nil, err
+	}
+
+	/* Connect the MQTT connection */
+	opts := PahoMQTT.NewClientOptions()
+	if brokerURI == "" {
+		brokerURI = defaultBrokerURI
+	}
+	opts.AddBroker(brokerURI)
+	opts.SetClientID(clientID)
+	// http://www.hivemq.com/blog/mqtt-security-fundamentals-authentication-username-password:
+	//   "The spec also states that a username without password is possible.
+	//    It’s not possible to just send a password without username."
+	if len(user) > 0 {
+		// we do not allow absent passwords yet
+		opts.SetUsername(user).SetPassword(pass)
+	}
+	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetOnConnectHandler(c.onConnect)
+	opts.SetProtocolVersion(4 | 0x80) // indicate bridge
+	if willTopic != "" {
+		opts.SetBinaryWill(willTopic, willPayload, byte(defaultQoS), defaultPersistence)
+	}
 
 	/* Create and start a client using the above ClientOptions */
 	c.mqtt = PahoMQTT.NewClient(opts)
