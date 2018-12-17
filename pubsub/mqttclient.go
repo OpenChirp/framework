@@ -28,6 +28,9 @@ type MQTTClient struct {
 	defaultPersistence bool
 	lock               sync.Mutex      // lock to ensure topics is consistent with subs
 	topics             map[string]byte // for reconnect subscriptions (byte is QoS)
+	publock            sync.RWMutex    // lock for publish to check for connected
+	connectedSubs      sync.Cond       // onConnect signal for subscribers and unsubscribers
+	connectedPubs      sync.Cond       // onConnect signal for publishers
 }
 
 type MQTTQoS byte
@@ -72,6 +75,8 @@ func NewMQTTClient(
 	c.defaultQoS = defaultQoS
 	c.defaultPersistence = defaultPersistence
 	c.topics = make(map[string]byte)
+	c.connectedSubs.L = &c.lock
+	c.connectedPubs.L = c.publock.RLocker()
 
 	/* Generate random client id for MQTT */
 	clientID, err := GenMQTTClientID("client")
@@ -118,6 +123,8 @@ func NewMQTTWillClient(
 	c.defaultQoS = defaultQoS
 	c.defaultPersistence = defaultPersistence
 	c.topics = make(map[string]byte)
+	c.connectedSubs.L = &c.lock
+	c.connectedPubs.L = c.publock.RLocker()
 
 	/* Generate random client id for MQTT */
 	clientID, err := GenMQTTClientID("client")
@@ -171,6 +178,8 @@ func NewMQTTBridgeClient(
 	c.defaultQoS = defaultQoS
 	c.defaultPersistence = defaultPersistence
 	c.topics = make(map[string]byte)
+	c.connectedSubs.L = &c.lock
+	c.connectedPubs.L = c.publock.RLocker()
 
 	/* Generate random client id for MQTT */
 	clientID, err := GenMQTTClientID("bridge")
@@ -225,6 +234,8 @@ func NewMQTTWillBridgeClient(
 	c.defaultQoS = defaultQoS
 	c.defaultPersistence = defaultPersistence
 	c.topics = make(map[string]byte)
+	c.connectedSubs.L = &c.lock
+	c.connectedPubs.L = c.publock.RLocker()
 
 	/* Generate random client id for MQTT */
 	clientID, err := GenMQTTClientID("bridge")
@@ -271,6 +282,8 @@ func NewMQTTWillBridgeClient(
 func (c *MQTTClient) onConnect(client PahoMQTT.Client) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	c.publock.Lock()
+	defer c.publock.Unlock()
 
 	// resubscribe - internal router should have kept original
 	// callbacks intact
@@ -280,8 +293,12 @@ func (c *MQTTClient) onConnect(client PahoMQTT.Client) {
 			client.Disconnect(disconnectWaitMS)
 			time.Sleep(subscribeOnConnectBackoff)
 			client.Connect()
+			return // don't signal that we have a connection yet
 		}
 	}
+
+	c.connectedSubs.Broadcast()
+	c.connectedPubs.Broadcast()
 }
 
 func (c *MQTTClient) Disconnect() {
@@ -294,6 +311,10 @@ func (c *MQTTClient) Disconnect() {
 func (c *MQTTClient) Subscribe(topic string, callback func(topic string, payload []byte)) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	if !c.mqtt.IsConnected() {
+		c.connectedSubs.Wait()
+	}
 
 	token := c.mqtt.Subscribe(topic, byte(c.defaultQoS), func(client PahoMQTT.Client, msg PahoMQTT.Message) {
 		callback(msg.Topic(), msg.Payload())
@@ -311,6 +332,10 @@ func (c *MQTTClient) Unsubscribe(topics ...string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	if !c.mqtt.IsConnected() {
+		c.connectedSubs.Wait()
+	}
+
 	token := c.mqtt.Unsubscribe(topics...)
 	if _, err := token.Wait(), token.Error(); err != nil {
 		return err
@@ -324,6 +349,13 @@ func (c *MQTTClient) Unsubscribe(topics ...string) error {
 }
 
 func (c *MQTTClient) Publish(topic string, payload interface{}) error {
+	c.publock.RLock()
+	defer c.publock.RUnlock()
+
+	if !c.mqtt.IsConnected() {
+		c.connectedPubs.Wait()
+	}
+
 	token := c.mqtt.Publish(topic, byte(c.defaultQoS), c.defaultPersistence, payload)
 	token.Wait()
 	return token.Error()
