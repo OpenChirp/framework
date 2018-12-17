@@ -12,11 +12,14 @@ import (
 )
 
 const (
-	defaultBrokerURI = "tcp://localhost:1883"
-	// Sets whether AutoReconnect will be set
-	defaultAutoReconnect      bool = true
+	defaultBrokerURI               = "tcp://localhost:1883"
 	disconnectWaitMS          uint = 300
 	subscribeOnConnectBackoff      = time.Second
+)
+
+var (
+	// Sets whether AutoReconnect will be set
+	AutoReconnect bool = true
 )
 
 type MQTTClient struct {
@@ -90,7 +93,7 @@ func NewMQTTClient(
 		// we do not allow absent passwords yet
 		opts.SetUsername(user).SetPassword(pass)
 	}
-	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetAutoReconnect(AutoReconnect)
 	opts.SetOnConnectHandler(c.onConnect)
 
 	/* Create and start a client using the above ClientOptions */
@@ -136,7 +139,7 @@ func NewMQTTWillClient(
 		// we do not allow absent passwords yet
 		opts.SetUsername(user).SetPassword(pass)
 	}
-	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetAutoReconnect(AutoReconnect)
 	opts.SetOnConnectHandler(c.onConnect)
 	if willTopic != "" {
 		opts.SetBinaryWill(willTopic, willPayload, byte(defaultQoS), defaultPersistence)
@@ -189,7 +192,7 @@ func NewMQTTBridgeClient(
 		// we do not allow absent passwords yet
 		opts.SetUsername(user).SetPassword(pass)
 	}
-	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetAutoReconnect(AutoReconnect)
 	opts.SetOnConnectHandler(c.onConnect)
 	opts.SetProtocolVersion(4 | 0x80) // indicate bridge
 
@@ -243,7 +246,7 @@ func NewMQTTWillBridgeClient(
 		// we do not allow absent passwords yet
 		opts.SetUsername(user).SetPassword(pass)
 	}
-	opts.SetAutoReconnect(defaultAutoReconnect)
+	opts.SetAutoReconnect(AutoReconnect)
 	opts.SetOnConnectHandler(c.onConnect)
 	opts.SetProtocolVersion(4 | 0x80) // indicate bridge
 	if willTopic != "" {
@@ -273,7 +276,7 @@ func (c *MQTTClient) onConnect(client PahoMQTT.Client) {
 	// callbacks intact
 	if token := client.SubscribeMultiple(c.topics, nil); token.Wait() && token.Error() != nil {
 		// start the cycle again
-		if defaultAutoReconnect {
+		if AutoReconnect {
 			client.Disconnect(disconnectWaitMS)
 			time.Sleep(subscribeOnConnectBackoff)
 			client.Connect()
