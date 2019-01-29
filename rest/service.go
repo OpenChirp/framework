@@ -254,7 +254,7 @@ func (host Host) ServiceUpdateConfig(
 ) (ServiceNode, error) {
 
 	var serviceNode ServiceNode
-	uri := host.uri + rootAPISubPath + servicesSubPath
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID
 	serviceReq := ServiceUpdateRequest{
 		// This blank slice will ensure that we can clear the config if configParams
 		// is nil
