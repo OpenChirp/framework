@@ -245,7 +245,7 @@ func (host Host) ServiceDelete(serviceID string) error {
 	return nil
 }
 
-// ServiceUpdateConfig makes an HTTP POST request to the framework server
+// ServiceUpdateConfig makes an HTTP PUT request to the framework server
 // in order to update the service's config.
 // This function returns the new and updated ServiceNode.
 func (host Host) ServiceUpdateConfig(
