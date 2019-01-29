@@ -28,6 +28,14 @@ type ServiceCreateRequest struct {
 	ConfigParameters []ServiceConfigParameter `json:"config_required,omitempty"`
 }
 
+// ServiceUpdateRequest encapsulates the data for a request to update a service
+type ServiceUpdateRequest struct {
+	Name             string                   `json:"name,omitempty"`
+	Description      string                   `json:"description,omitempty"`
+	Properties       map[string]string        `json:"properties,omitempty"`
+	ConfigParameters []ServiceConfigParameter `json:"config_required,omitempty"`
+}
+
 /*
 Services Device Config Responses Look Like The Following:
 [
@@ -235,4 +243,51 @@ func (host Host) ServiceDelete(serviceID string) error {
 		return fmt.Errorf("%v", resp.Status)
 	}
 	return nil
+}
+
+// ServiceUpdateConfig makes an HTTP POST request to the framework server
+// in order to update the service's config.
+// This function returns the new and updated ServiceNode.
+func (host Host) ServiceUpdateConfig(
+	serviceID string,
+	configParams []ServiceConfigParameter, // can be nil
+) (ServiceNode, error) {
+
+	var serviceNode ServiceNode
+	uri := host.uri + rootAPISubPath + servicesSubPath
+	serviceReq := ServiceUpdateRequest{
+		// This blank slice will ensure that we can clear the config if configParams
+		// is nil
+		ConfigParameters: []ServiceConfigParameter{},
+	}
+
+	if configParams != nil {
+		serviceReq.ConfigParameters = configParams
+	}
+
+	body, err := json.Marshal(&serviceReq)
+	if err != nil {
+		return serviceNode, err
+	}
+	fmt.Println("Request is:", string(body))
+	req, err := http.NewRequest("PUT", uri, bytes.NewReader(body))
+	if err != nil {
+		return serviceNode, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return serviceNode, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return serviceNode, fmt.Errorf("%v", resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&serviceNode)
+
+	return serviceNode, err
 }
