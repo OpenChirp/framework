@@ -296,7 +296,7 @@ func (host Host) ServiceUpdateConfig(
 // in order to generate a security token for the service
 func (host Host) ServiceTokenGenerate(serviceID string) (string, error) {
 	var token string
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/token"
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID + serviceTokenSubPath
 
 	req, err := http.NewRequest("POST", uri, nil)
 	if err != nil {
@@ -324,7 +324,7 @@ func (host Host) ServiceTokenGenerate(serviceID string) (string, error) {
 // in order to regenerate a security token for the service
 func (host Host) ServiceTokenRegenerate(serviceID string) (string, error) {
 	var token string
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/token"
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID + serviceTokenSubPath
 
 	req, err := http.NewRequest("PUT", uri, nil)
 	if err != nil {
@@ -351,7 +351,7 @@ func (host Host) ServiceTokenRegenerate(serviceID string) (string, error) {
 // ServiceTokenDelete makes an HTTP DELETE request to the framework server
 // in order to delete the security token for the service
 func (host Host) ServiceTokenDelete(serviceID string) error {
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/token"
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID + serviceTokenSubPath
 
 	req, err := http.NewRequest("DELETE", uri, nil)
 	if err != nil {

@@ -15,6 +15,7 @@ const (
 	deviceSubPath         = "/device"
 	servicesSubPath       = "/service"
 	serviceDevicesSubPath = "/things"
+	serviceTokenSubPath   = "/token"
 	locationSubPath       = "/location"
 	userSubPath           = "/user"
 )
