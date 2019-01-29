@@ -122,17 +122,17 @@ func (n KeyValuePair) String() string {
 }
 
 // RequestServiceInfo makes an HTTP GET to the framework server requesting
-// the Service Node information for service with ID serviceid.
-func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
+// the Service Node information for service with ID serviceID.
+func (host Host) RequestServiceInfo(serviceID string) (ServiceNode, error) {
 	var serviceNode ServiceNode
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return serviceNode, err
 	}
 	req.SetBasicAuth(host.user, host.pass)
 
-	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceid)
+	// resp, err := http.Get(host.uri + servicesSubPath + "/" + serviceID)
 	resp, err := host.client.Do(req)
 	if err != nil {
 		// should report auth problems here in future
@@ -147,9 +147,9 @@ func (host Host) RequestServiceInfo(serviceid string) (ServiceNode, error) {
 }
 
 // RequestServiceDeviceList
-func (host Host) RequestServiceDeviceList(serviceid string) ([]ServiceDeviceListItem, error) {
+func (host Host) RequestServiceDeviceList(serviceID string) ([]ServiceDeviceListItem, error) {
 	var serviceDeviceListItems = make([]ServiceDeviceListItem, 0)
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid + serviceDevicesSubPath
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID + serviceDevicesSubPath
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return serviceDeviceListItems, err
@@ -216,9 +216,9 @@ func (host Host) ServiceCreate(
 }
 
 // ServiceDelete makes an HTTP DELETE request to the framework server
-// on the specified serviceid
-func (host Host) ServiceDelete(serviceid string) error {
-	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceid
+// on the specified serviceID
+func (host Host) ServiceDelete(serviceID string) error {
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID
 	req, err := http.NewRequest("DELETE", uri, nil)
 	if err != nil {
 		return err
