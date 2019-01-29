@@ -203,6 +203,12 @@ func (c *ServiceClient) SetDeviceStatus(id string, msgs ...interface{}) error {
 	return c.Publish(c.node.Pubsub.TopicStatus, payload)
 }
 
+// UpdateConfigParameters updates the service's device config template
+func (c *ServiceClient) UpdateConfigParameters(configParams []rest.ServiceConfigParameter) error {
+	_, err := c.host.ServiceUpdateConfig(c.id, configParams)
+	return err
+}
+
 func (c *ServiceClient) updateEventsHandler() func(topic string, payload []byte) {
 	return func(topic string, payload []byte) {
 		c.updatesWg.Add(1)
