@@ -291,3 +291,84 @@ func (host Host) ServiceUpdateConfig(
 
 	return serviceNode, err
 }
+
+// ServiceTokenGenerate makes an HTTP POST request to the framework server
+// in order to generate a security token for the service
+func (host Host) ServiceTokenGenerate(serviceID string) (string, error) {
+	var token string
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/token"
+
+	req, err := http.NewRequest("POST", uri, nil)
+	if err != nil {
+		return token, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return token, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return token, fmt.Errorf("%v", resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&token)
+
+	return token, err
+}
+
+// ServiceTokenRegenerate makes an HTTP PUT request to the framework server
+// in order to regenerate a security token for the service
+func (host Host) ServiceTokenRegenerate(serviceID string) (string, error) {
+	var token string
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/token"
+
+	req, err := http.NewRequest("PUT", uri, nil)
+	if err != nil {
+		return token, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return token, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return token, fmt.Errorf("%v", resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&token)
+
+	return token, err
+}
+
+// ServiceTokenDelete makes an HTTP DELETE request to the framework server
+// in order to delete the security token for the service
+func (host Host) ServiceTokenDelete(serviceID string) error {
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/token"
+
+	req, err := http.NewRequest("DELETE", uri, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return fmt.Errorf("%v", resp.Status)
+	}
+
+	return nil
+}
