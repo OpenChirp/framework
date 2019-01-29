@@ -177,6 +177,64 @@ func (host Host) RequestServiceDeviceList(serviceID string) ([]ServiceDeviceList
 	return serviceDeviceListItems, err
 }
 
+// ServiceList makes an HTTP GET request to the framework server
+// in order to get a list of all services.
+func (host Host) ServiceList() ([]ServiceNode, error) {
+
+	var serviceNodes []ServiceNode
+	uri := host.uri + rootAPISubPath + servicesSubPath
+
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return serviceNodes, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return serviceNodes, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return serviceNodes, fmt.Errorf("%v", resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&serviceNodes)
+
+	return serviceNodes, err
+}
+
+// ServiceGet makes an HTTP GET request to the framework server
+// in order to get the specified service information
+func (host Host) ServiceGet(serviceID string) (ServiceNode, error) {
+
+	var serviceNode ServiceNode
+	uri := host.uri + rootAPISubPath + servicesSubPath + "/" + serviceID
+
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return serviceNode, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return serviceNode, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != httpStatusCodeOK {
+		return serviceNode, fmt.Errorf("%v", resp.Status)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&serviceNode)
+
+	return serviceNode, err
+}
+
 // ServiceCreate makes an HTTP POST request to the framework server
 // in order to create a new service with
 func (host Host) ServiceCreate(
