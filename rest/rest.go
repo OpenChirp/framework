@@ -26,6 +26,24 @@ const (
 
 const jsonPrettyIndent = "  "
 
+func DecodeOCError(resp *http.Response) error {
+	if resp.StatusCode == httpStatusCodeOK {
+		return nil
+	}
+	var ocerror struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&ocerror); err != nil {
+		// failed to decode a message error
+		// return server error message instead
+		return fmt.Errorf(resp.Status)
+	}
+	return fmt.Errorf(ocerror.Error.Message)
+}
+
 // Host represents the RESTful HTTP server that hosts the framework
 type Host struct {
 	uri string
