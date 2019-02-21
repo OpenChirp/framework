@@ -30,6 +30,9 @@ const (
 const jsonPrettyIndent = "  "
 
 func DecodeOCError(resp *http.Response) error {
+	if resp == nil {
+		return fmt.Errorf("Filed to decode response. Check err returned by http request.")
+	}
 	if resp.StatusCode == httpStatusCodeOK {
 		return nil
 	}
