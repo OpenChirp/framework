@@ -7,11 +7,14 @@
 package rest
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
 const (
 	rootAPISubPath        = "/apiv1"
+	authAPISubPath        = "/authv1"
 	deviceSubPath         = "/device"
 	servicesSubPath       = "/service"
 	serviceDevicesSubPath = "/things"
