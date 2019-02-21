@@ -21,6 +21,7 @@ const (
 	serviceTokenSubPath   = "/token"
 	locationSubPath       = "/location"
 	userSubPath           = "/user"
+	groupSubPath          = "/group"
 )
 
 const (
