@@ -96,6 +96,9 @@ func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
 		return deviceNode, err
 	}
 	defer resp.Body.Close()
+	if err := DecodeOCError(resp); err != nil {
+		return deviceNode, err
+	}
 	err = json.NewDecoder(resp.Body).Decode(&deviceNode)
 	return deviceNode, err
 }
@@ -139,6 +142,9 @@ func (host Host) DeviceTransducerLastValue(deviceID, transducerID string) ([]byt
 		return value, err
 	}
 	defer resp.Body.Close()
+	if err := DecodeOCError(resp); err != nil {
+		return value, err
+	}
 	value, err = ioutil.ReadAll(resp.Body)
 	return value, err
 }
@@ -159,6 +165,9 @@ func (host Host) RequestLinkedService(deviceID, serviceID string) (DeviceListSer
 		return deviceServiceItem, err
 	}
 	defer resp.Body.Close()
+	if err := DecodeOCError(resp); err != nil {
+		return deviceServiceItem, err
+	}
 	err = json.NewDecoder(resp.Body).Decode(&deviceServiceItem)
 	return deviceServiceItem, err
 }
@@ -180,12 +189,12 @@ func (host Host) LinkService(deviceID, serviceID string, config []KeyValuePair) 
 	}
 	req.SetBasicAuth(host.user, host.pass)
 
-	// resp, err := http.Get(uri)
 	resp, err := host.client.Do(req)
 	if err != nil {
-		resp.Body.Close()
+		return err
 	}
-	return err
+	defer resp.Body.Close()
+	return DecodeOCError(resp)
 }
 
 // DelinkService makes an HTTP DELETE to the framework server to delink the
@@ -198,12 +207,12 @@ func (host Host) DelinkService(deviceID, serviceID string) error {
 	}
 	req.SetBasicAuth(host.user, host.pass)
 
-	// resp, err := http.Get(uri)
 	resp, err := host.client.Do(req)
 	if err != nil {
-		resp.Body.Close()
+		return err
 	}
-	return err
+	defer resp.Body.Close()
+	return DecodeOCError(resp)
 }
 
 // ExecuteCommand makes an HTTP POST to the framework server to execute the
@@ -216,10 +225,10 @@ func (host Host) ExecuteCommand(deviceID, commandID string) error {
 	}
 	req.SetBasicAuth(host.user, host.pass)
 
-	// resp, err := http.Get(uri)
 	resp, err := host.client.Do(req)
 	if err != nil {
-		resp.Body.Close()
+		return err
 	}
-	return err
+	defer resp.Body.Close()
+	return DecodeOCError(resp)
 }
