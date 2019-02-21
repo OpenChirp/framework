@@ -258,7 +258,6 @@ func (host Host) ServiceCreate(
 	if err != nil {
 		return serviceNode, err
 	}
-	fmt.Println("Request is:", string(body))
 	req, err := http.NewRequest("POST", uri, bytes.NewReader(body))
 	if err != nil {
 		return serviceNode, err
