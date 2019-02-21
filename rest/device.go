@@ -54,6 +54,30 @@ func (n *DeviceNode) Clone() DeviceNode {
 	return ret
 }
 
+// DeviceAll makes an HTTP GET to the framework server requesting
+// the a list of all devices
+func (host Host) DeviceAll() ([]NodeDescriptor, error) {
+	var devices []NodeDescriptor
+	uri := host.uri + rootAPISubPath + deviceSubPath
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return devices, err
+	}
+	req.SetBasicAuth(host.user, host.pass)
+
+	resp, err := host.client.Do(req)
+	if err != nil {
+		// should report auth problems here in future
+		return devices, err
+	}
+	defer resp.Body.Close()
+	if err := DecodeOCError(resp); err != nil {
+		return devices, err
+	}
+	err = json.NewDecoder(resp.Body).Decode(&devices)
+	return devices, err
+}
+
 // RequestDeviceInfo makes an HTTP GET to the framework server requesting
 // the Device Node information for the device with ID deviceID.
 func (host Host) RequestDeviceInfo(deviceID string) (DeviceNode, error) {
