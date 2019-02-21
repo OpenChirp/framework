@@ -81,9 +81,9 @@ func (host Host) RequestUserInfo() (UserDetails, error) {
 	return user, err
 }
 
-// AllUsers makes an HTTP GET to the framework server requesting
+// UserAll makes an HTTP GET to the framework server requesting
 // the all user summaries
-func (host Host) AllUsers() ([]User, error) {
+func (host Host) UserAll() ([]User, error) {
 	var users []User
 	uri := host.uri + rootAPISubPath + userSubPath + "/all"
 	req, err := http.NewRequest("GET", uri, nil)
