@@ -22,6 +22,7 @@ const (
 	locationSubPath       = "/location"
 	userSubPath           = "/user"
 	groupSubPath          = "/group"
+	healthCheckSubPath    = "/check"
 )
 
 const (
