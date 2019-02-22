@@ -49,6 +49,11 @@ func DecodeOCError(resp *http.Response) error {
 		// return server error message instead
 		return fmt.Errorf(resp.Status)
 	}
+
+	// Insert blank error message
+	if ocerror.Error.Message == "" {
+		ocerror.Error.Message = "<Blank-Error-Message-Received>"
+	}
 	return fmt.Errorf(ocerror.Error.Message)
 }
 
